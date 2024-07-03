@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#define LED 32
+#define LED 32 //pin labelled 32 on the board
 
 void setup() {
   Serial.begin(115200);
