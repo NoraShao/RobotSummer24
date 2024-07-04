@@ -1,6 +1,11 @@
+/*
+* Same code as in the first lab.
+* GPIO21->SDA
+* GPIO22->SCK
+* VDD = 3.3V
+*/
+
 #include <Arduino.h>
-
-
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 
