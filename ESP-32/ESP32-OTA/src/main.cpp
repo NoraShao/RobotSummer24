@@ -4,6 +4,8 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 
+//yoinked from internet. pls don't steal my wifi
+
 const char* ssid = "Jeff's iPhone";
 const char* password = "hissyandmineko";
 
