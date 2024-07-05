@@ -21,6 +21,7 @@ uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9d, 0x66, 0x50}; // scotch 64:b7:08:9d:66:5
 
 // peer info for ESP NOW
 // (peer means two-way communication--no master and slave)
+// need this
 esp_now_peer_info_t peerInfo;
 
 // can send data using a structure
@@ -31,10 +32,11 @@ typedef struct message {
   uint8_t num;
 } message;
 
+// creates instances of the data type to store the messages
 message incoming;
 message outgoing;
 
-// outgoing infomation
+// outgoing infomation (I didn't actually use these variables)
 String message_out;
 uint8_t num_out;
 unsigned long time_out;
@@ -61,7 +63,7 @@ void setup() {
   display_handler.setTextSize(1);
   display_handler.setTextColor(SSD1306_WHITE);
   display_handler.setCursor(0,0);
-  display_handler.println("ESP32 communcation version 1.0");
+  display_handler.println("ESP32 communcation version 1.0"); // I use these to make sure the code was updated
   display_handler.display();
   Serial.println("ESP32 communcation version 1.0");
   delay(1000);
@@ -70,21 +72,22 @@ void setup() {
   WiFi.mode(WIFI_STA);
 
   // initialize esp-now
+  // need this
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
 
-  // initializing random number generator
+  // initializing random number generator (for the message content)
     randomSeed(13);
   }
 
-  // Register peer
+  // Register peer (need this)
   // make sure to use the correct MAC address
   memcpy(peerInfo.peer_addr, MAC, 6);
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;
 
-  // add the peer
+  // add the peer (need this)
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
     Serial.println("Error adding peer");
     return;
@@ -100,6 +103,7 @@ void setup() {
 
 void loop() {
 
+  // configuring the message to send
   outgoing.text_message = "Duct says hi :)";
   outgoing.num = random(1, 20);
   outgoing.timestamp = millis();
@@ -109,8 +113,11 @@ void loop() {
   Serial.println(outgoing.num);
   Serial.println(outgoing.timestamp);
 
+  // sends the message outgoing to the MAC mac address
+  // max message size 250 bytes
   esp_err_t result = esp_now_send(MAC, (uint8_t *) &outgoing, sizeof(outgoing));
 
+  // whether or not message is sent successfully
   if (result == ESP_OK) {
     // Serial.print("Message ");
     // Serial.print(outgoing.num);
@@ -125,20 +132,22 @@ void loop() {
   
   };
 
-// when data is sent
+// function to handle what happens when data is sent
 void dataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  // prints the delivery statys
   Serial.print("\r\nLast Packet Send Status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   if (status ==0){
-    success = "delivered :)";
+    success = "delivered :)"; // other ESP recieved the message
   }
   else{
-    success = "not delivered :(";
+    success = "not delivered :("; // other ESP did not recieve the message
   }
 }
 
-// when data is received
+// function to handle when data is received
 void dataReceived(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  // copies the data received (in incomingData) and copies it to the message type
   memcpy(&incoming, incomingData, sizeof(incoming));
   Serial.print("Bytes received: ");
   Serial.println(len);
@@ -147,6 +156,7 @@ void dataReceived(const uint8_t * mac, const uint8_t *incomingData, int len) {
   num_in = incoming.num;
 }
 
+// displays information on the OLED display and the serial monitor
 void updateDisplay() {
   // OLED display
   display_handler.clearDisplay();
