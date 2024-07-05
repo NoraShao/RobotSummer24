@@ -5,6 +5,7 @@
 #include <AsyncElegantOTA.h>
 
 //yoinked from internet. pls don't steal Cass's wifi
+// https://randomnerdtutorials.com/esp32-ota-over-the-air-vs-code/
 
 // gateway: 192.168.0.1
 // duct ip 192.168.0.104
