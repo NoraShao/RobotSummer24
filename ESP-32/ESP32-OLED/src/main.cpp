@@ -3,6 +3,7 @@
 * GPIO21->SDA
 * GPIO22->SCK
 * VDD = 3.3V
+* also prints to the serial monitor
 */
 
 #include <Arduino.h>
@@ -15,6 +16,8 @@
 Adafruit_SSD1306 display_handler(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void setup() {
+  Serial.begin(115200);
+
   display_handler.begin(SSD1306_SWITCHCAPVCC, 0x3C);
  
   // Displays Adafruit logo by default. call clearDisplay immediately if you don't want this.
@@ -28,6 +31,7 @@ void setup() {
   display_handler.setCursor(0,0);
   display_handler.println("Hello world!");
   display_handler.display();
+  Serial.println("hello world");
 }
 
 void loop() {};

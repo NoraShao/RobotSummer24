@@ -15,8 +15,8 @@
 Adafruit_SSD1306 display_handler(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // MAC address of receiving ESP32
-uint8_t scotch_MAC[] = {0x50, 0x66, 0x90, 0x08, 0xB7, 0x64};
-uint8_t duct_MAC[] = {0x44, 0x61, 0x9C, 0x08, 0xB7, 0x64};
+uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9d, 0x66, 0x50}; // scotch 64:b7:08:9d:66:50
+//uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9c, 0x61, 0x44}; // duct 64:b7:08:9c:61:44
 
 // peer info for ESP NOW
 // (peer means two-way communication--no master and slave)
@@ -62,6 +62,8 @@ void setup() {
   display_handler.setCursor(0,0);
   display_handler.println("ESP32 communcation version 1.0");
   display_handler.display();
+  Serial.println("ESP32 communcation version 1.0");
+  delay(1000);
 
   // sets device as a wifi station
   WiFi.mode(WIFI_STA);
@@ -70,14 +72,14 @@ void setup() {
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
-  }
 
-  // register for send callback to get the status of the sent packet
-  esp_now_register_send_cb(dataSent);
+  // initializing random number generator
+    randomSeed(13);
+  }
 
   // Register peer
   // make sure to use the correct MAC address
-  memcpy(peerInfo.peer_addr, scotch_MAC, 6);
+  memcpy(peerInfo.peer_addr, MAC, 6);
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;
 
@@ -87,22 +89,50 @@ void setup() {
     return;
   }
 
+  // register for send callback to get the status of the sent packet
+  esp_now_register_send_cb(dataSent);
+
   // register for a callback function when data is received
   esp_now_register_recv_cb(esp_now_recv_cb_t(dataReceived));
 
 }
 
-void loop() {};
+void loop() {
+
+  outgoing.text_message = "Duct says hi :)";
+  outgoing.num = random(1, 20);
+  outgoing.timestamp = millis();
+
+  Serial.println("sending the following message: ");
+  Serial.println(outgoing.text_message);
+  Serial.println(outgoing.num);
+  Serial.println(outgoing.timestamp);
+
+  esp_err_t result = esp_now_send(MAC, (uint8_t *) &outgoing, sizeof(outgoing));
+
+  if (result == ESP_OK) {
+    // Serial.print("Message ");
+    // Serial.print(outgoing.num);
+    Serial.println("message sent :)");
+  }
+  else {
+    Serial.println("error sending message ");
+    // Serial.println(outgoing.num);
+  }
+  updateDisplay();
+  delay(10000);
+  
+  };
 
 // when data is sent
 void dataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.print("\r\nLast Packet Send Status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   if (status ==0){
-    success = "sent successfully :)";
+    success = "delivered :)";
   }
   else{
-    success = "not sent :(";
+    success = "not delivered :(";
   }
 }
 
@@ -126,7 +156,7 @@ void updateDisplay() {
   display_handler.println("INCOMING DATA: ");
 
   display_handler.setCursor(0, 15);
-  display_handler.print("Message");
+  display_handler.print("Message: ");
   display_handler.print(message_in);
 
   display_handler.setCursor(0, 35);
