@@ -3,6 +3,7 @@
 #include <Adafruit_SSD1306.h>
 #include <esp_now.h>
 #include <WiFi.h>
+#include <ArduinoOTA.h>
 
 //variables
 
@@ -14,10 +15,10 @@ const int IR_backright = 5;
 const int IR_middleleft = 6;
 const int IR_middle = 7;
 const int IR_middleright = 8;
-const int IN1 = 9;
-const int IN2 = 10;
-const int IN3 = 11;
-const int IN4 = 12;
+const int IN1 = 34;
+const int IN2 = 35;
+const int IN3 = 37;
+const int IN4 = 38;
 
 const int set_speed = 512;
 const int turn_speed = 512;
@@ -42,6 +43,12 @@ typedef struct flag{
 } flag;
 
 flag trigAction;
+
+IPAddress local_IP(192, 168, 0, 104);
+IPAddress gateway(192, 168,0, 1);
+IPAddress subnet(255, 255, 0, 0);
+const char* ssid = "TP-Link_C8D1";
+const char* password = "93456593";
 
 //functions
 
@@ -116,6 +123,16 @@ void setup() {
   esp_now_register_send_cb(onSend);
   esp_now_register_recv_cb(esp_now_recv_cb_t(onReceive));
 
+  //OTA
+  if (!WiFi.config(local_IP, gateway, subnet)) {
+  Serial.println("OTA fail");
+  }
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+  }
+
+  ArduinoOTA.begin();
+
   //input
   pinMode(start_pin, INPUT);
   pinMode(IR_frontright, INPUT);
@@ -135,8 +152,7 @@ void setup() {
 //loop
 
 void loop() {
-  startUp();
-  //command sequence
+  ArduinoOTA.handle();
   stop();
 }
 
@@ -194,11 +210,11 @@ void linefollowTimer(unsigned long time_interval, char motorDirection){
   int previous_error, error_sum, error;
   while(new_time < initial_time + time_interval){
     error = getError();
-    double PID = P * error + I * error_sum + D * (error - previous_error);
-    previous_error = error;
-    error_sum += error;
-    setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
     new_time = millis();
+    error_sum += error * (new_time - initial_time);
+    double PID = P * error + I * error_sum + D * (error - previous_error);
+    setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
+    previous_error = error;
   }
 }
 
@@ -220,15 +236,17 @@ void goTo(int initialPosition, int finalPosition){
     Serial.println("gotTo fail");
   }
   
+  unsigned long initial_time = millis(), new_time;
   while(linesPassed < difference){
     if(digitalRead(IR_left) == HIGH || digitalRead(IR_right) == HIGH){
       linesPassed++;
     }
     error = getError();
-    double PID = P * error + I * error_sum + D * abs(error - previous_error);
-    previous_error = error;
-    error_sum += error;
+    new_time = millis();
+    error_sum += error * (new_time - initial_time);
+    double PID = P * error + I * error_sum + D * (error - previous_error);
     setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
+    previous_error = error;
   }
   linefollowTimer(offsetTimer, motorDirection);
   stop();
@@ -241,12 +259,14 @@ void upTo(int upTo_time){
 
 void backUp(){
   int previous_error, error_sum, error;
+  unsigned long initial_time = millis(), new_time;
   while(error != -7){
     error = getError();
-    int PID = P * error + I * error_sum + D * abs(error - previous_error);
+    new_time = millis();
+    error_sum += error * (new_time - initial_time);
+    double PID = P * error + I * error_sum + D * (error - previous_error);
+    setSpeed('b', 'b', set_speed + PID, set_speed - PID);
     previous_error = error;
-    error_sum += error;
-    setSpeed('b','b', set_speed + PID, set_speed - PID);
   }
   while(error == -7){
     setSpeed('b','b', set_speed, set_speed);
