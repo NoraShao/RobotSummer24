@@ -2,6 +2,9 @@
 ESP32 OTA using PlatformIO
 Refer to:
 https://lonelybinary.com/blogs/learn/esp32-ota-using-platformio
+
+upload code by clicking the PIO alien on the left, then pico32_ota/general/upload and monitor
+make sure that your laptop is connected to the same network as the esp32
 */
 
 #include <Arduino.h>
@@ -48,7 +51,7 @@ void setup(void) {
   Serial.println(WiFi.localIP());
   // OTA Configiration and Enable OTA
   Serial.println("\nEnabling OTA Feature");
-  //ArduinoOTA.setPassword("");
+  //ArduinoOTA.setPassword(""); // we can add a password if we want
   ArduinoOTA.begin();
   Serial.println("OTA success :)");
 }
