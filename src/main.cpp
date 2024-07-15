@@ -1,37 +1,45 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+/*
 #include <esp_now.h>
 #include <WiFi.h>
-#include <ArduinoOTA.h>
+*/
 
 //variables
+#define start_pin 25
+#define IR_frontleft 26
+#define IR_frontright 32
+#define IR_backleft 33
+#define IR_backright 27
+#define IR_middleleft 14
+#define IR_middle 12
+#define IR_middleright 13
+#define IN1 4
+#define IN2 0
+#define IN3 2
+#define IN4 15
 
-const int start_pin = 1;
-const int IR_frontleft = 2;
-const int IR_frontright = 3;
-const int IR_backleft = 4;
-const int IR_backright = 5;
-const int IR_middleleft = 6;
-const int IR_middle = 7;
-const int IR_middleright = 8;
-const int IN1 = 34;
-const int IN2 = 35;
-const int IN3 = 37;
-const int IN4 = 38;
+const int CH1 = 0;
+const int CH2 = 1;
+const int CH3 = 2;
+const int CH4 = 3;
+const int PWMRes = 12;
+const int PWMFreq = 100;
 
-const int set_speed = 512;
-const int turn_speed = 512;
+const int set_speed = 2048;
+const int turn_speed = 2048;
 const int P = 0;
 const int I = 0;
 const int D = 0;
 
-const int turn90_delay = 100;
-const int offsetTimer = 100;
-const int upTo_timer = 100;
-const int far_timer = 100;
-const int close_timer = 100;
+const int turn90_delay = 0;
+const int offsetTimer = 0;
+const int upTo_timer = 0;
+const int far_timer = 0;
+const int close_timer = 0;
 
+/*
 bool go;
 
 uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9d, 0x66, 0x50}; //robot 1 recieving
@@ -43,17 +51,14 @@ typedef struct flag{
 } flag;
 
 flag trigAction;
-
-IPAddress local_IP(192, 168, 0, 104);
-IPAddress gateway(192, 168,0, 1);
-IPAddress subnet(255, 255, 0, 0);
-const char* ssid = "TP-Link_C8D1";
-const char* password = "93456593";
-
+*/
 //functions
 
 void startUp();
 //starts main loop when start_pin goes high
+
+void shutDown();
+//
 
 void stop();
 //stops the driver wheels
@@ -64,7 +69,7 @@ void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right
 void turn(char direction, int turn_delay);
 //turns the driver wheels
 
-void linefollowTimer(int time_interval, char motor_direction);
+void linefollowTimer(unsigned long time_interval, char motor_direction);
 //follows line for the provided time
 
 void goTo(int initialPosition, int finalPosition);
@@ -91,6 +96,7 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
+/*
 void sendFlag();
 //sends flag to other robot
 
@@ -102,13 +108,16 @@ void receiveFlag();
 
 void onReceive(const uint8_t *mac, const uint8_t *incomingData, int message_length);
 //confirms flag received
+*/
 
 //set up
 
 void setup() {
+  
+  Serial.begin(115200);
 
   //communication
-  Serial.begin(9600);
+  /*
   WiFi.mode(WIFI_STA);
   if(esp_now_init() != ESP_OK){
     Serial.println("Error initializing ESP-NOW");
@@ -122,17 +131,8 @@ void setup() {
   }
   esp_now_register_send_cb(onSend);
   esp_now_register_recv_cb(esp_now_recv_cb_t(onReceive));
-
-  //OTA
-  if (!WiFi.config(local_IP, gateway, subnet)) {
-  Serial.println("OTA fail");
-  }
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-  }
-
-  ArduinoOTA.begin();
-
+  */
+  
   //input
   pinMode(start_pin, INPUT);
   pinMode(IR_frontright, INPUT);
@@ -142,51 +142,80 @@ void setup() {
   pinMode(IR_middleleft, INPUT);
   pinMode(IR_middle, INPUT);
   pinMode(IR_middleright, INPUT);
+  
   //output
-  pinMode(IN1, OUTPUT);
-  pinMode(IN2, OUTPUT);
-  pinMode(IN3, OUTPUT);
-  pinMode(IN4, OUTPUT);
+  ledcSetup(CH1, PWMFreq, PWMRes);
+  ledcSetup(CH2, PWMFreq, PWMRes);
+  ledcSetup(CH3, PWMFreq, PWMRes);
+  ledcSetup(CH4, PWMFreq, PWMRes);
+  ledcAttachPin(IN1, CH1);
+  ledcAttachPin(IN2, CH2);
+  ledcAttachPin(IN3, CH3);
+  ledcAttachPin(IN4, CH4);
 }
 
 //loop
 
 void loop() {
-  ArduinoOTA.handle();
+  ledcWrite(CH1, 2000);
+  ledcWrite(CH2, 0);
+  ledcWrite(CH3, 2000);
+  ledcWrite(CH4, 0);
+  delay(8000);
   stop();
+  ledcWrite(CH1, 0);
+  ledcWrite(CH2, 2000);
+  ledcWrite(CH3, 0);
+  ledcWrite(CH4, 2000);
+  delay(8000);
+  stop();
+ /*
+ Serial.println(digitalRead(IR_middleleft));
+ Serial.println(digitalRead(IR_middle));
+ Serial.println(digitalRead(IR_middleright));
+ Serial.println();
+ delay(1000);
+ */
 }
 
 //function definitions
 
 void startUp() {
-  while(start_pin == LOW){
+  while(digitalRead(start_pin) == LOW){
+  }
+}
+
+void shutDown(){
+  stop();
+  while(1){
+    delay(1000);
   }
 }
 
 void stop(){
-  analogWrite(IN1, 0);
-  analogWrite(IN2, 0);
-  analogWrite(IN3, 0);
-  analogWrite(IN4, 0);
+  ledcWrite(CH1, 0);
+  ledcWrite(CH2, 0);
+  ledcWrite(CH3, 0);
+  ledcWrite(CH4, 0);
 }
 
 void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right){
   if(left_motor == 'f'){
-      analogWrite(IN1, speed_left);
-      analogWrite(IN2, 0);
+      ledcWrite(CH1, speed_left);
+      ledcWrite(CH2, 0);
     } else if (left_motor == 'b'){
-      analogWrite(IN1, 0);
-      analogWrite(IN2, speed_left);
+      ledcWrite(CH1, 0);
+      ledcWrite(CH2, speed_left);
     } else {
       Serial.println("set speed_left fail");
     }
 
     if(right_motor == 'f'){
-      analogWrite(IN3, speed_right);
-      analogWrite(IN4, 0);
+      ledcWrite(CH3, speed_right);
+      ledcWrite(CH4, 0);
     } else if (right_motor == 'b'){
-      analogWrite(IN3, 0);
-      analogWrite(IN4, speed_right);
+      ledcWrite(CH3, 0);
+      ledcWrite(CH4, speed_right);
     } else {
       Serial.println("set speed_right fail");
     }
@@ -207,12 +236,13 @@ void turn(char direction, int turn_delay){
 
 void linefollowTimer(unsigned long time_interval, char motorDirection){
   unsigned long initial_time = millis(), new_time;
-  int previous_error, error_sum, error;
+  double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
   while(new_time < initial_time + time_interval){
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
-    double PID = P * error + I * error_sum + D * (error - previous_error);
+    error_difference = (error - previous_error) / (new_time - initial_time);
+    PID = P * error + I * error_sum + D * error_difference;
     setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
     previous_error = error;
   }
@@ -221,7 +251,7 @@ void linefollowTimer(unsigned long time_interval, char motorDirection){
 void goTo(int initialPosition, int finalPosition){
 
   int difference = abs(finalPosition - initialPosition);
-  int IR_left, IR_right, linesPassed = 0, error, previous_error, error_sum;
+  int IR_left, IR_right, linesPassed = 0;
   char motorDirection;
 
   motorDirection = initialPosition < finalPosition ? 'f' : 'b';
@@ -237,6 +267,7 @@ void goTo(int initialPosition, int finalPosition){
   }
   
   unsigned long initial_time = millis(), new_time;
+  double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
   while(linesPassed < difference){
     if(digitalRead(IR_left) == HIGH || digitalRead(IR_right) == HIGH){
       linesPassed++;
@@ -244,7 +275,8 @@ void goTo(int initialPosition, int finalPosition){
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
-    double PID = P * error + I * error_sum + D * (error - previous_error);
+    error_difference = (error - previous_error) / (new_time - initial_time);
+    double PID = P * error + I * error_sum + D * error_difference;
     setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
     previous_error = error;
   }
@@ -258,13 +290,14 @@ void upTo(int upTo_time){
 }
 
 void backUp(){
-  int previous_error, error_sum, error;
+  double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
   unsigned long initial_time = millis(), new_time;
   while(error != -7){
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
-    double PID = P * error + I * error_sum + D * (error - previous_error);
+    error_difference = (error - previous_error) / (new_time - initial_time);
+    PID = P * error + I * error_sum + D * error_difference;
     setSpeed('b', 'b', set_speed + PID, set_speed - PID);
     previous_error = error;
   }
@@ -291,14 +324,14 @@ int getError(){
   int leftIR_reading = digitalRead(IR_middleleft);
   int middleIR_reading = digitalRead(IR_middle);
   int rightIR_reading = digitalRead(IR_middleright);
-  int sum = 4 * leftIR_reading + 2 * middleIR_reading + 1 * rightIR_reading;
-  switch(sum){
+  int bitSum = 4 * leftIR_reading + 2 * middleIR_reading + 1 * rightIR_reading;
+  switch(bitSum){
     case 4: return -2;
     case 6: return -1;
     case 2: return 0;
     case 3: return 1;
     case 1: return 2;
-    case 7: return 7;
+    case 7: return 0;
     case 0: return -7;
     default: {
       Serial.println("getError fail");
@@ -307,6 +340,7 @@ int getError(){
   }
 }
 
+/*
 void sendFlag(){
   trigAction.act = true;
   esp_err_t result = esp_now_send(MAC, (uint8_t *) &trigAction, sizeof(trigAction));
@@ -331,3 +365,4 @@ void onReceive(const uint8_t *mac, const uint8_t *incomingData, int message_leng
   memcpy(&trigAction, incomingData, sizeof(trigAction));
   go = true;
 }
+*/
