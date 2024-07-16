@@ -17,8 +17,8 @@
 #define IR_middleright 13
 #define IN1 4
 #define IN2 0
-#define IN3 2
-#define IN4 15
+#define IN3 15
+#define IN4 2
 
 const int CH1 = 0;
 const int CH2 = 1;
@@ -157,18 +157,20 @@ void setup() {
 //loop
 
 void loop() {
-  ledcWrite(CH1, 2000);
+  ledcWrite(CH1, 4095);
   ledcWrite(CH2, 0);
-  ledcWrite(CH3, 2000);
+  ledcWrite(CH3, 4095);
   ledcWrite(CH4, 0);
-  delay(8000);
+  delay(4000);
   stop();
+  delay(4000);
   ledcWrite(CH1, 0);
-  ledcWrite(CH2, 2000);
+  ledcWrite(CH2, 4095);
   ledcWrite(CH3, 0);
-  ledcWrite(CH4, 2000);
-  delay(8000);
+  ledcWrite(CH4, 4095);
+  delay(4000);
   stop();
+  delay(4000);
  /*
  Serial.println(digitalRead(IR_middleleft));
  Serial.println(digitalRead(IR_middle));
