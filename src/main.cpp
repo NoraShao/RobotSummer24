@@ -1,10 +1,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
-/*
+
 #include <esp_now.h>
 #include <WiFi.h>
-*/
+#include <ArduinoOTA.h>
+
 
 //variables
 #define start_pin 25
@@ -38,6 +39,10 @@ const int offsetTimer = 0;
 const int upTo_timer = 0;
 const int far_timer = 0;
 const int close_timer = 0;
+
+// wifi connection information
+const char* ssid = "the Interweb";
+const char* password = "hissyandmineko";
 
 /*
 bool go;
@@ -116,6 +121,26 @@ void setup() {
   
   Serial.begin(115200);
 
+  // connecting to Wi-Fi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) { // need this, but don't necessarily have to print to Serial
+    delay(500);
+    Serial.print(".");
+  }
+  // printing Wi-Fi connection information
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  // OTA Configuration and Enable OTA
+  Serial.println("\nTurning on OTA");
+  ArduinoOTA.begin();
+
   //communication
   /*
   WiFi.mode(WIFI_STA);
@@ -157,6 +182,8 @@ void setup() {
 //loop
 
 void loop() {
+  ArduinoOTA.handle(); //receive OTA updates
+  
   ledcWrite(CH1, 4095);
   ledcWrite(CH2, 0);
   ledcWrite(CH3, 4095);
