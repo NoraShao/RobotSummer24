@@ -1,23 +1,22 @@
 #include <Arduino.h>
-
-#define farLeft_IR 0
-#define left_IR 4
-#define right_IR 2
-#define farRight_IR 15
+#define IR1 0
+#define IR2 4
+#define IR3 37
+#define IR4 38
 
 void setup() {
   Serial.begin(115200);
-  pinMode(farLeft_IR, INPUT);
-  pinMode(left_IR, INPUT);
-  pinMode(right_IR, INPUT);
-  pinMode(farRight_IR, INPUT);
+  pinMode(IR1, INPUT_PULLDOWN);
+  pinMode(IR2, INPUT_PULLDOWN);
+  pinMode(IR3, INPUT_PULLDOWN);
+  pinMode(IR4, INPUT_PULLDOWN);
 }
 
 void loop() {
-  Serial.println(digitalRead(farLeft_IR));
-  Serial.println(digitalRead(left_IR));
-  Serial.println(digitalRead(right_IR));
-  Serial.println(digitalRead(farRight_IR));
+  Serial.println(digitalRead(IR1));
+  Serial.println(digitalRead(IR2));
+  Serial.println(digitalRead(IR3));
+  Serial.println(digitalRead(IR4));
   Serial.println();
   delay(100);
 }
