@@ -15,15 +15,19 @@ make sure that your laptop is connected to the same network as the esp32
 // duct ip 192.168.0.104
 // scotch ip 192.168.0.105
 
-// Set your Static IP address
-IPAddress local_IP(192, 168, 0, 105); // need this (static IP address of ESP32)
+// Set your Static IP address 192.168.109.118
+// IPAddress local_IP(192, 168, 109, 118); // need this (static IP address of ESP32) scotch
+IPAddress local_IP(192, 168, 109, 100); // duct
 // Set your Gateway IP address
-IPAddress gateway(192, 168,0, 1); // need this (can change with the router)
+IPAddress gateway(192, 168, 109, 80); // need this (can change with the router) 192.168.109.80
 
-IPAddress subnet(255, 255, 0, 0); // need this
+IPAddress subnet(255, 255, 255, 0); // need this
 
-const char* ssid = "TP-Link_C8D1"; // ssid of the wifi they're using
-const char* password = "93456593"; // wifi password
+// const char* ssid = "TP-Link_C8D1"; // ssid of the wifi they're using
+// const char* password = "93456593"; // wifi password
+
+const char* ssid = "Jeff's iPhone";
+const char* password = "hissyandmineko";
 
 void setup(void) {
   Serial.begin(115200); // starts the serial monitor
