@@ -1,22 +1,38 @@
 #include <Arduino.h>
-#define IR1 0
-#define IR2 4
-#define IR3 37
-#define IR4 38
+
+#define rotaryPin1 25
+#define rotaryPin2 26
+
+volatile int clickChange, clickCounter = 0, prev_clickChange = 0;
+
+void clickCount();
 
 void setup() {
   Serial.begin(115200);
-  pinMode(IR1, INPUT_PULLDOWN);
-  pinMode(IR2, INPUT_PULLDOWN);
-  pinMode(IR3, INPUT_PULLDOWN);
-  pinMode(IR4, INPUT_PULLDOWN);
+  pinMode(rotaryPin1, INPUT_PULLUP);
+  pinMode(rotaryPin2, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCount, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCount, CHANGE);
 }
 
 void loop() {
-  Serial.println(digitalRead(IR1));
-  Serial.println(digitalRead(IR2));
-  Serial.println(digitalRead(IR3));
-  Serial.println(digitalRead(IR4));
-  Serial.println();
+  int prev_clickCounter;
+  if(clickCounter != prev_clickCounter){
+  Serial.println(clickCounter);
   delay(100);
+  }
+  prev_clickCounter = clickCounter;
+}
+
+void clickCount(){
+  clickChange = 2 * digitalRead(rotaryPin1) + 1 * digitalRead(rotaryPin2);
+  if(clickChange == 1 && prev_clickChange == 3 || clickChange == 0 && prev_clickChange == 1 ||
+   clickChange == 2 && prev_clickChange == 0 || clickChange == 3 && prev_clickChange == 2){
+    clickCounter--;
+   } else if (clickChange == 3 && prev_clickChange == 1 || clickChange == 2 && prev_clickChange == 3 ||
+   clickChange == 0 && prev_clickChange == 2 || clickChange == 1 && prev_clickChange == 0){
+    clickCounter++;
+   }
+  prev_clickChange = clickChange;
+
 }
