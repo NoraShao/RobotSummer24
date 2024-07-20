@@ -18,11 +18,20 @@
 #define LED2 26
 #define LED3 32
 #define LED4 33
+#define rotaryPin1 5
+#define rotaryPin2 10
+#define microswitch 9
+#define servo 27
+#define clawIN1 12
+#define clawIN2 14
 
 const int CH1 = 0;
 const int CH2 = 1;
 const int CH3 = 2;
 const int CH4 = 3;
+const int servoCH = 4;
+const int DCCH1 = 5;
+const int DCCH2 = 6;
 const int PWMRes = 12;
 const int PWMFreq = 100;
 
@@ -32,11 +41,17 @@ const int P = 100;
 const int I = 0;
 const int D = 0;
 
-const int turn90_delay = 0;
 const int offsetTimer = 0;
 const int upTo_timer = 0;
 const int far_timer = 0;
 const int close_timer = 0;
+
+volatile int clickChange;
+volatile int clickCounter;
+volatile int prev_clickChange;
+volatile int IRCounter = 0;
+volatile int position_difference;
+volatile bool lineFollowFlag = true;
 
 /*
 bool go;
@@ -96,8 +111,20 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
+void startRotaryCount();
+
+void stopRotaryCount();
+
+void startIRCount();
+
+void stopRIRCount();
+
+void IRCount();
+
 void LEDSwitch();
 //Toggles LED deoending on state of IR sensor
+
+void clickCount();
 
 /*
 void sendFlag();
@@ -149,8 +176,15 @@ void setup() {
   pinMode(IR_right, INPUT_PULLUP);
   pinMode(IR_left, INPUT_PULLUP);
   pinMode(IR_farLeft, INPUT_PULLUP);
+  pinMode(rotaryPin1, INPUT_PULLUP);
+  pinMode(rotaryPin2, INPUT_PULLUP);
+  pinMode(microswitch, INPUT_PULLUP);
   
   //output
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
   ledcSetup(CH1, PWMFreq, PWMRes);
   ledcSetup(CH2, PWMFreq, PWMRes);
   ledcSetup(CH3, PWMFreq, PWMRes);
@@ -159,16 +193,11 @@ void setup() {
   ledcAttachPin(IN2, CH2);
   ledcAttachPin(IN3, CH3);
   ledcAttachPin(IN4, CH4);
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
-  pinMode(LED4, OUTPUT);
 }
 
 //loop
 
 void loop() {
-  linefollowTimer(900000000, 'f');
 }
 
 //function definitions
@@ -180,9 +209,7 @@ void startUp() {
 
 void shutDown(){
   stop();
-  while(1){
-    delay(1000);
-  }
+  while(1){}
 }
 
 void stop(){
@@ -194,85 +221,75 @@ void stop(){
 
 void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right){
   if(left_motor == 'f'){
-      ledcWrite(CH1, speed_left);
-      ledcWrite(CH2, 0);
-    } else if (left_motor == 'b'){
-      ledcWrite(CH1, 0);
-      ledcWrite(CH2, speed_left);
-    } else {
-      Serial.println("set speed_left fail");
-    }
-
-    if(right_motor == 'f'){
-      ledcWrite(CH3, speed_right);
-      ledcWrite(CH4, 0);
-    } else if (right_motor == 'b'){
-      ledcWrite(CH3, 0);
-      ledcWrite(CH4, speed_right);
-    } else {
-      Serial.println("set speed_right fail");
-    }
+    ledcWrite(CH1, speed_left);
+    ledcWrite(CH2, 0);
+  } else if (left_motor == 'b'){
+    ledcWrite(CH1, 0);
+    ledcWrite(CH2, speed_left);
+  }
+  if(right_motor == 'f'){
+    ledcWrite(CH3, speed_right);
+    ledcWrite(CH4, 0);
+  } else if (right_motor == 'b'){
+    ledcWrite(CH3, 0);
+    ledcWrite(CH4, speed_right);
+  }
 }
 
 void turn(char direction, int turn_delay){
+  startRotaryCount();
   if(direction == 'l'){
     setSpeed('b', 'f', turn_speed, turn_speed);
-    delay(turn_delay);
   } else if(direction == 'r'){
     setSpeed('f', 'b', turn_speed, turn_speed);
-    delay(turn_delay);
-  } else {
-    Serial.println("turn fail");
   }
+  while(clickCounter <=24){}
+  stopRotaryCount();
   stop();
 }
 
-void linefollowTimer(unsigned long time_interval, char motorDirection){
+void linefollow(char motorDirection){
   unsigned long initial_time = millis(), new_time;
   double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
-  while(new_time < initial_time + time_interval){
+  while(lineFollowFlag){
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
     error_difference = (error - previous_error) / (new_time - initial_time);
     PID = P * error + I * error_sum + D * error_difference;
-    setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
     previous_error = error;
+    if(motorDirection == 'f'){
+      setSpeed('f', 'f', set_speed + PID, set_speed - PID);
+    } else if(motorDirection == 'b'){
+      setSpeed('b', 'b', set_speed - PID, set_speed + PID);
+    }
   }
 }
 
 void goTo(int initialPosition, int finalPosition){
 
-  int difference = abs(finalPosition - initialPosition);
-  int IRleft, IRright, linesPassed = 0;
-  char motorDirection;
+  position_difference = abs(finalPosition - initialPosition);
 
-  motorDirection = initialPosition < finalPosition ? 'f' : 'b';
+  char motorDirection = initialPosition < finalPosition ? 'f' : 'b';
 
-  IRleft = IR_sideLeft;
-  IRright = IR_sideRight; 
-  
-  unsigned long initial_time = millis(), new_time;
-  double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
-  while(linesPassed < difference){
-    if(digitalRead(IR_left) == HIGH || digitalRead(IR_right) == HIGH){
-      linesPassed++;
-    }
-  
-    error = getError();
-    new_time = millis();
-    error_sum += error * (new_time - initial_time);
-    error_difference = (error - previous_error) / (new_time - initial_time);
-    double PID = P * error + I * error_sum + D * error_difference;
-    setSpeed(motorDirection, motorDirection, set_speed + PID, set_speed - PID);
-    previous_error = error;
-  }
-  linefollowTimer(offsetTimer, motorDirection);
+  attachInterrupt(digitalPinToInterrupt(IR_sideLeft), IRCount, HIGH);
+  attachInterrupt(digitalPinToInterrupt(IR_sideRight), IRCount, HIGH);
+
+  linefollow(motorDirection);
+
+  detachInterrupt(digitalPinToInterrupt(IR_sideLeft));
+  detachInterrupt(digitalPinToInterrupt(IR_sideRight));
+  lineFollowFlag = true;
+  IRCounter = 0;
   stop();
 }
 
-void upTo(int upTo_time){
-  linefollowTimer(upTo_time, 'f');
+void upTo(int upToClicks){
+  startRotaryCount();
+  while(clickCounter <= upToClicks){
+    linefollow('f');
+  }
+  stopRotaryCount();
   stop();
 }
 
@@ -332,6 +349,20 @@ int getError(){
   }
 }
 
+void startRotaryCount(){
+  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCount, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCount, CHANGE);
+  clickCounter = 0;
+  prev_clickChange = 0;
+}
+
+void stopRotaryCount(){
+  detachInterrupt(digitalPinToInterrupt(rotaryPin1));
+  detachInterrupt(digitalPinToInterrupt(rotaryPin2));
+  clickCounter = 0;
+  prev_clickChange = 0;
+}
+
 void LEDSwitch(){
   if(digitalRead(IR_farRight) == 1){
     digitalWrite(LED1, HIGH);
@@ -356,6 +387,26 @@ void LEDSwitch(){
   }
   if(digitalRead(IR_farLeft) == 0){
     digitalWrite(LED4, LOW);
+  }
+}
+
+void clickCount(){
+  clickChange = 2 * digitalRead(rotaryPin1) + 1 * digitalRead(rotaryPin2);
+  if(clickChange == 1 && prev_clickChange == 3 || clickChange == 0 && prev_clickChange == 1 ||
+   clickChange == 2 && prev_clickChange == 0 || clickChange == 3 && prev_clickChange == 2){
+    clickCounter--;
+   } else if (clickChange == 3 && prev_clickChange == 1 || clickChange == 2 && prev_clickChange == 3 ||
+   clickChange == 0 && prev_clickChange == 2 || clickChange == 1 && prev_clickChange == 0){
+    clickCounter++;
+   }
+  prev_clickChange = clickChange;
+
+}
+
+void IRCount(){
+  IRCounter++;
+  if(IRCounter >= position_difference){
+    lineFollowFlag = false;
   }
 }
 
