@@ -13,7 +13,6 @@
 #define IN1 15
 #define IN2 13
 #define IN3 21
-
 #define IN4 20
 #define LED1 25
 #define LED2 26
@@ -97,6 +96,9 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
+void LEDSwitch();
+//Toggles LED deoending on state of IR sensor
+
 /*
 void sendFlag();
 //sends flag to other robot
@@ -133,6 +135,11 @@ void setup() {
   esp_now_register_send_cb(onSend);
   esp_now_register_recv_cb(esp_now_recv_cb_t(onReceive));
   */
+
+  attachInterrupt(digitalPinToInterrupt(IR_farRight), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_right), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_left), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_farLeft), LEDSwitch, CHANGE);
   
   //input
   pinMode(start_pin, INPUT);
@@ -142,10 +149,6 @@ void setup() {
   pinMode(IR_right, INPUT_PULLUP);
   pinMode(IR_left, INPUT_PULLUP);
   pinMode(IR_farLeft, INPUT_PULLUP);
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
-  pinMode(LED4, OUTPUT);
   
   //output
   ledcSetup(CH1, PWMFreq, PWMRes);
@@ -156,13 +159,17 @@ void setup() {
   ledcAttachPin(IN2, CH2);
   ledcAttachPin(IN3, CH3);
   ledcAttachPin(IN4, CH4);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
 }
 
 //loop
 
 void loop() {
   linefollowTimer(900000000, 'f');
-  //linefollowTimer(99999999, 'f');
+  LEDSwitch();
 }
 
 //function definitions
@@ -323,6 +330,33 @@ int getError(){
       Serial.println("getError fail");
       return 0;
     }
+  }
+}
+
+void LEDSwitch(){
+  if(digitalRead(IR_farRight) == 1){
+    digitalWrite(LED1, HIGH);
+  }
+  if(digitalRead(IR_right) == 1){
+    digitalWrite(LED2, HIGH);
+  }
+  if(digitalRead(IR_left) == 1){
+    digitalWrite(LED3, HIGH);
+  }
+  if(digitalRead(IR_farLeft) == 1){
+    digitalWrite(LED4, HIGH);
+  }
+  if(digitalRead(IR_farRight) == 0){
+    digitalWrite(LED1, LOW);
+  }
+  if(digitalRead(IR_right) == 0){
+    digitalWrite(LED2, LOW);
+  }
+  if(digitalRead(IR_left) == 0){
+    digitalWrite(LED3, LOW);
+  }
+  if(digitalRead(IR_farLeft) == 0){
+    digitalWrite(LED4, LOW);
   }
 }
 

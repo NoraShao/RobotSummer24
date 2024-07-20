@@ -16,10 +16,10 @@
 #define IR_middleleft 14
 #define IR_middle 12
 #define IR_middleright 13
-#define IN1 20
-#define IN2 21
-#define IN3 22
-#define IN4 19
+#define IN1 15
+#define IN2 13
+#define IN3 21
+#define IN4 20
 
 const int CH1 = 0;
 const int CH2 = 1;
