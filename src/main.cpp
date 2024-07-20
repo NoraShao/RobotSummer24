@@ -2,24 +2,22 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 
-#include <esp_now.h>
-#include <WiFi.h>
-#include <ArduinoOTA.h>
-
-
 //variables
-#define start_pin 25
-#define IR_frontleft 26
-#define IR_frontright 32
-#define IR_backleft 33
-#define IR_backright 27
-#define IR_middleleft 14
-#define IR_middle 12
-#define IR_middleright 13
-#define IN1 4
-#define IN2 0
-#define IN3 15
-#define IN4 2
+#define start_pin 0
+#define IR_sideRight 34
+#define IR_sideLeft 35
+#define IR_farRight 22
+#define IR_right 19
+#define IR_left 8
+#define IR_farLeft 7
+#define IN1 15
+#define IN2 13
+#define IN3 21
+#define IN4 20
+#define LED1 25
+#define LED2 26
+#define LED3 32
+#define LED4 33
 
 const int CH1 = 0;
 const int CH2 = 1;
@@ -28,9 +26,9 @@ const int CH4 = 3;
 const int PWMRes = 12;
 const int PWMFreq = 100;
 
-const int set_speed = 2048;
-const int turn_speed = 2048;
-const int P = 0;
+const int set_speed = 3000;
+const int turn_speed = 2000;
+const int P = 100;
 const int I = 0;
 const int D = 0;
 
@@ -39,10 +37,6 @@ const int offsetTimer = 0;
 const int upTo_timer = 0;
 const int far_timer = 0;
 const int close_timer = 0;
-
-// wifi connection information
-const char* ssid = "the Interweb";
-const char* password = "hissyandmineko";
 
 /*
 bool go;
@@ -57,13 +51,14 @@ typedef struct flag{
 
 flag trigAction;
 */
+
 //functions
 
 void startUp();
 //starts main loop when start_pin goes high
 
 void shutDown();
-//
+//permanetly stops loop until reset
 
 void stop();
 //stops the driver wheels
@@ -101,6 +96,9 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
+void LEDSwitch();
+//Toggles LED deoending on state of IR sensor
+
 /*
 void sendFlag();
 //sends flag to other robot
@@ -121,26 +119,6 @@ void setup() {
   
   Serial.begin(115200);
 
-  // connecting to Wi-Fi
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("");
-
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) { // need this, but don't necessarily have to print to Serial
-    delay(500);
-    Serial.print(".");
-  }
-  // printing Wi-Fi connection information
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  // OTA Configuration and Enable OTA
-  Serial.println("\nTurning on OTA");
-  ArduinoOTA.begin();
-
   //communication
   /*
   WiFi.mode(WIFI_STA);
@@ -157,16 +135,20 @@ void setup() {
   esp_now_register_send_cb(onSend);
   esp_now_register_recv_cb(esp_now_recv_cb_t(onReceive));
   */
+
+  attachInterrupt(digitalPinToInterrupt(IR_farRight), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_right), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_left), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_farLeft), LEDSwitch, CHANGE);
   
   //input
   pinMode(start_pin, INPUT);
-  pinMode(IR_frontright, INPUT);
-  pinMode(IR_frontleft, INPUT);
-  pinMode(IR_backright, INPUT);
-  pinMode(IR_backleft, INPUT);
-  pinMode(IR_middleleft, INPUT);
-  pinMode(IR_middle, INPUT);
-  pinMode(IR_middleright, INPUT);
+  pinMode(IR_sideRight, INPUT_PULLUP);
+  pinMode(IR_sideLeft, INPUT_PULLUP);
+  pinMode(IR_farRight, INPUT_PULLUP);
+  pinMode(IR_right, INPUT_PULLUP);
+  pinMode(IR_left, INPUT_PULLUP);
+  pinMode(IR_farLeft, INPUT_PULLUP);
   
   //output
   ledcSetup(CH1, PWMFreq, PWMRes);
@@ -177,34 +159,16 @@ void setup() {
   ledcAttachPin(IN2, CH2);
   ledcAttachPin(IN3, CH3);
   ledcAttachPin(IN4, CH4);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
 }
 
 //loop
 
 void loop() {
-  ArduinoOTA.handle(); //receive OTA updates
-  
-  ledcWrite(CH1, 4095);
-  ledcWrite(CH2, 0);
-  ledcWrite(CH3, 4095);
-  ledcWrite(CH4, 0);
-  delay(4000);
-  stop();
-  delay(4000);
-  ledcWrite(CH1, 0);
-  ledcWrite(CH2, 4095);
-  ledcWrite(CH3, 0);
-  ledcWrite(CH4, 4095);
-  delay(4000);
-  stop();
-  delay(4000);
- /*
- Serial.println(digitalRead(IR_middleleft));
- Serial.println(digitalRead(IR_middle));
- Serial.println(digitalRead(IR_middleright));
- Serial.println();
- delay(1000);
- */
+  linefollowTimer(900000000, 'f');
 }
 
 //function definitions
@@ -280,20 +244,13 @@ void linefollowTimer(unsigned long time_interval, char motorDirection){
 void goTo(int initialPosition, int finalPosition){
 
   int difference = abs(finalPosition - initialPosition);
-  int IR_left, IR_right, linesPassed = 0;
+  int IRleft, IRright, linesPassed = 0;
   char motorDirection;
 
   motorDirection = initialPosition < finalPosition ? 'f' : 'b';
 
-  if(motorDirection == 'f'){
-    IR_left = IR_frontleft;
-    IR_right = IR_frontright; 
-  } else if (motorDirection == 'b'){
-    IR_left = IR_backleft;
-    IR_right = IR_backright;
-  } else {
-    Serial.println("gotTo fail");
-  }
+  IRleft = IR_sideLeft;
+  IRright = IR_sideRight; 
   
   unsigned long initial_time = millis(), new_time;
   double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
@@ -301,6 +258,7 @@ void goTo(int initialPosition, int finalPosition){
     if(digitalRead(IR_left) == HIGH || digitalRead(IR_right) == HIGH){
       linesPassed++;
     }
+  
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
@@ -321,7 +279,7 @@ void upTo(int upTo_time){
 void backUp(){
   double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
   unsigned long initial_time = millis(), new_time;
-  while(error != -7){
+  while(error != -100){
     error = getError();
     new_time = millis();
     error_sum += error * (new_time - initial_time);
@@ -330,7 +288,7 @@ void backUp(){
     setSpeed('b', 'b', set_speed + PID, set_speed - PID);
     previous_error = error;
   }
-  while(error == -7){
+  while(error == -100){
     setSpeed('b','b', set_speed, set_speed);
   }
   stop();
@@ -350,22 +308,54 @@ void locateServeArea(int currentPosition, char motorDirection){
 }
 
 int getError(){
-  int leftIR_reading = digitalRead(IR_middleleft);
-  int middleIR_reading = digitalRead(IR_middle);
-  int rightIR_reading = digitalRead(IR_middleright);
-  int bitSum = 4 * leftIR_reading + 2 * middleIR_reading + 1 * rightIR_reading;
+  int farLeftIR_reading = digitalRead(IR_farLeft);
+  int leftIR_reading = digitalRead(IR_left);
+  int rightIR_reading = digitalRead(IR_right);
+  int farRightIR_reading = digitalRead(IR_farRight);
+  int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 4: return -2;
-    case 6: return -1;
-    case 2: return 0;
-    case 3: return 1;
-    case 1: return 2;
-    case 7: return 0;
-    case 0: return -7;
+    case 0: return 0; break;
+    case 8: return 4; break;
+    case 12: return 3; break;
+    case 14: return 2; break;
+    case 4: return 1; break;
+    case 6: return 0; break;
+    case 2: return -1; break;
+    case 7: return -2; break;
+    case 3: return -3; break;
+    case 1: return -4; break;
+    case 15: return 0; break;
     default: {
       Serial.println("getError fail");
-      return -99;
+      return 0;
     }
+  }
+}
+
+void LEDSwitch(){
+  if(digitalRead(IR_farRight) == 1){
+    digitalWrite(LED1, HIGH);
+  }
+  if(digitalRead(IR_right) == 1){
+    digitalWrite(LED2, HIGH);
+  }
+  if(digitalRead(IR_left) == 1){
+    digitalWrite(LED3, HIGH);
+  }
+  if(digitalRead(IR_farLeft) == 1){
+    digitalWrite(LED4, HIGH);
+  }
+  if(digitalRead(IR_farRight) == 0){
+    digitalWrite(LED1, LOW);
+  }
+  if(digitalRead(IR_right) == 0){
+    digitalWrite(LED2, LOW);
+  }
+  if(digitalRead(IR_left) == 0){
+    digitalWrite(LED3, LOW);
+  }
+  if(digitalRead(IR_farLeft) == 0){
+    digitalWrite(LED4, LOW);
   }
 }
 
