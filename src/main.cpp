@@ -3,9 +3,9 @@
 #include <Adafruit_SSD1306.h>
 
 //variables
-#define start_pin 0
-#define IR_sideRight 34
-#define IR_sideLeft 35
+#define start_pin 37
+#define IR_sideRight 1
+#define IR_sideLeft 3
 #define IR_farRight 22
 #define IR_right 19
 #define IR_left 8
@@ -20,8 +20,10 @@
 #define LED4 33
 #define rotaryPin1 5
 #define rotaryPin2 10
+#define rotaryPin3 4
+#define rotaryPin4 2
 #define microswitch 9
-#define servo 27
+#define servoIN 27
 #define clawIN1 12
 #define clawIN2 14
 
@@ -30,42 +32,43 @@ const int CH2 = 1;
 const int CH3 = 2;
 const int CH4 = 3;
 const int servoCH = 4;
-const int DCCH1 = 5;
-const int DCCH2 = 6;
+const int clawCH1 = 5;
+const int clawCH2 = 6;
 const int PWMRes = 12;
 const int PWMFreq = 100;
 
-const int set_speed = 3000;
-const int turn_speed = 2000;
+const double set_speed = 3000;
+double other_speed = set_speed;
 const int P = 100;
 const int I = 0;
 const int D = 0;
+const int rP = 0;
+const int rI = 0;
+const int rD = 0;
 
-const int offsetTimer = 0;
-const int upTo_timer = 0;
-const int far_timer = 0;
-const int close_timer = 0;
+const int serve_area_far = 0;
+const int serve_area_close = 0;
 
-volatile int clickChange;
-volatile int clickCounter;
-volatile int prev_clickChange;
+const int updownSpeed = 1000;
+const int grabOffset = 0;
+const unsigned long upTime = 2000;
+
+volatile int clickL;
+volatile int clickCounterL;
+volatile int prev_clickL;
+volatile int clickR;
+volatile int clickCounterR;
+volatile int prev_clickR;
 volatile int IRCounter = 0;
 volatile int position_difference;
 volatile bool lineFollowFlag = true;
 
-/*
-bool go;
+volatile int prevRotaryError;
+volatile unsigned long prevRotaryTime;
+volatile int prevClickCounterL;
+volatile int prevClickCounterR;
 
-uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9d, 0x66, 0x50}; //robot 1 recieving
-//uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9c, 0x61, 0x44}; //robot 2 recieving
-esp_now_peer_info_t peerInfo;
-
-typedef struct flag{
-  bool act;
-} flag;
-
-flag trigAction;
-*/
+TaskHandle_t balanceTaskHandle;
 
 //functions
 
@@ -81,10 +84,10 @@ void stop();
 void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right);
 //sets speed and direction for driver wheels
 
-void turn(char direction, int turn_delay);
+void turn(char direction);
 //turns the driver wheels
 
-void linefollowTimer(unsigned long time_interval, char motor_direction);
+void linefollow(char motor_direction);
 //follows line for the provided time
 
 void goTo(int initialPosition, int finalPosition);
@@ -99,7 +102,7 @@ void backUp();
 void locateServeArea(int currentPosition, char motor_direction);
 //goes to horizontal position of serving area
 
-int getError();
+double getError();
 //locates position of IRs on the black tape
 
 void grab(String food);
@@ -111,34 +114,29 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
-void startRotaryCount();
+void resetRotaryCount();
+//resets rotary count
 
-void stopRotaryCount();
+void clickCountLeft();
+//counts rotary clicks on the left wheel
 
-void startIRCount();
+void clickCountRight();
+//counts rotary clicks on the right wheel
 
-void stopRIRCount();
+void balanceMotors(void *null);
+//controls the right motor to go the same speed as the left
+
+void startBalance();
+//starts balancing motor speed
+
+void stopBalance();
+//stops balancing motor speed
 
 void IRCount();
+//counts number of activations from wing IR sensors
 
 void LEDSwitch();
 //Toggles LED deoending on state of IR sensor
-
-void clickCount();
-
-/*
-void sendFlag();
-//sends flag to other robot
-
-void onSend(const uint8_t *mac_addr, esp_now_send_status_t status);
-//confirms sendFlag
-
-void receiveFlag();
-//holds action until flag is received
-
-void onReceive(const uint8_t *mac, const uint8_t *incomingData, int message_length);
-//confirms flag received
-*/
 
 //set up
 
@@ -146,27 +144,14 @@ void setup() {
   
   Serial.begin(115200);
 
-  //communication
-  /*
-  WiFi.mode(WIFI_STA);
-  if(esp_now_init() != ESP_OK){
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  }
-  memcpy(peerInfo.peer_addr, MAC, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-  if(esp_now_add_peer(&peerInfo) != ESP_OK){
-    Serial.println("Error adding peer");
-  }
-  esp_now_register_send_cb(onSend);
-  esp_now_register_recv_cb(esp_now_recv_cb_t(onReceive));
-  */
-
   attachInterrupt(digitalPinToInterrupt(IR_farRight), LEDSwitch, CHANGE);
   attachInterrupt(digitalPinToInterrupt(IR_right), LEDSwitch, CHANGE);
   attachInterrupt(digitalPinToInterrupt(IR_left), LEDSwitch, CHANGE);
   attachInterrupt(digitalPinToInterrupt(IR_farLeft), LEDSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCountLeft, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCountLeft, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin3), clickCountRight, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rotaryPin4), clickCountRight, CHANGE);
   
   //input
   pinMode(start_pin, INPUT);
@@ -178,6 +163,8 @@ void setup() {
   pinMode(IR_farLeft, INPUT_PULLUP);
   pinMode(rotaryPin1, INPUT_PULLUP);
   pinMode(rotaryPin2, INPUT_PULLUP);
+  pinMode(rotaryPin3, INPUT_PULLUP);
+  pinMode(rotaryPin4, INPUT_PULLUP);
   pinMode(microswitch, INPUT_PULLUP);
   
   //output
@@ -189,10 +176,16 @@ void setup() {
   ledcSetup(CH2, PWMFreq, PWMRes);
   ledcSetup(CH3, PWMFreq, PWMRes);
   ledcSetup(CH4, PWMFreq, PWMRes);
+  ledcSetup(clawCH1, PWMFreq, PWMRes);
+  ledcSetup(clawCH2, PWMFreq, PWMRes);
+  ledcSetup(servoCH, PWMFreq, PWMRes);
   ledcAttachPin(IN1, CH1);
   ledcAttachPin(IN2, CH2);
   ledcAttachPin(IN3, CH3);
   ledcAttachPin(IN4, CH4);
+  ledcAttachPin(clawIN1, clawCH1);
+  ledcAttachPin(clawIN2, clawCH2);
+  ledcAttachPin(servoIN, servoCH);
 }
 
 //loop
@@ -203,8 +196,7 @@ void loop() {
 //function definitions
 
 void startUp() {
-  while(digitalRead(start_pin) == LOW){
-  }
+  while(digitalRead(start_pin) == LOW){}
 }
 
 void shutDown(){
@@ -236,34 +228,38 @@ void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right
   }
 }
 
-void turn(char direction, int turn_delay){
-  startRotaryCount();
-  if(direction == 'l'){
-    setSpeed('b', 'f', turn_speed, turn_speed);
-  } else if(direction == 'r'){
-    setSpeed('f', 'b', turn_speed, turn_speed);
+void turn(char direction){
+  startBalance();
+  while(clickCounterL <=24){
+    if(direction == 'l'){
+    setSpeed('b', 'f', set_speed, other_speed);
+    } else if(direction == 'r'){
+    setSpeed('f', 'b', set_speed, other_speed);
+    }
   }
-  while(clickCounter <=24){}
-  stopRotaryCount();
+  stopBalance();
   stop();
 }
 
 void linefollow(char motorDirection){
-  unsigned long initial_time = millis(), new_time;
+  unsigned long previous_time = millis(), current_time;
   double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
+  startBalance();
   while(lineFollowFlag){
     error = getError();
-    new_time = millis();
-    error_sum += error * (new_time - initial_time);
-    error_difference = (error - previous_error) / (new_time - initial_time);
+    current_time = millis();
+    error_sum += error * (current_time - previous_time);
+    error_difference = current_time - previous_time != 0 ? (error - previous_error) / (current_time - previous_time) : 0;
     PID = P * error + I * error_sum + D * error_difference;
     previous_error = error;
+    previous_time = current_time;
     if(motorDirection == 'f'){
-      setSpeed('f', 'f', set_speed + PID, set_speed - PID);
+      setSpeed('f', 'f', set_speed + PID, other_speed - PID);
     } else if(motorDirection == 'b'){
-      setSpeed('b', 'b', set_speed - PID, set_speed + PID);
+      setSpeed('b', 'b', set_speed - PID, other_speed + PID);
     }
   }
+  stopBalance();
 }
 
 void goTo(int initialPosition, int finalPosition){
@@ -285,62 +281,59 @@ void goTo(int initialPosition, int finalPosition){
 }
 
 void upTo(int upToClicks){
-  startRotaryCount();
-  while(clickCounter <= upToClicks){
+  while(clickCounterL <= upToClicks){
     linefollow('f');
   }
-  stopRotaryCount();
   stop();
 }
 
 void backUp(){
-  double previous_error = 0, error_sum = 0, error_difference = 0, error, PID;
-  unsigned long initial_time = millis(), new_time;
-  while(error != -100){
+  double error = getError();
+  while(error != -0.001){
+    linefollow('b');
     error = getError();
-    new_time = millis();
-    error_sum += error * (new_time - initial_time);
-    error_difference = (error - previous_error) / (new_time - initial_time);
-    PID = P * error + I * error_sum + D * error_difference;
-    setSpeed('b', 'b', set_speed + PID, set_speed - PID);
-    previous_error = error;
   }
-  while(error == -100){
-    setSpeed('b','b', set_speed, set_speed);
+  while(error == -0.001){
+    startBalance();
+    setSpeed('b','b', set_speed, other_speed);
+    error = getError();
   }
+  stopBalance();
   stop();
 }
 
 void locateServeArea(int currentPosition, char motorDirection){
-  int time_to_area;
+  int distance_to_area;
   if(currentPosition == 1 || currentPosition == 6){
-    time_to_area = far_timer;
+    distance_to_area = serve_area_far;
   } else if(currentPosition == 4){
-    time_to_area = close_timer;
-  } else {
-    Serial.println("locateServeArea fail");
+    distance_to_area = serve_area_close;
   }
-  linefollowTimer(time_to_area, motorDirection);
+  startBalance();
+  while(clickCounterL <= distance_to_area){
+    setSpeed(motorDirection, motorDirection, set_speed, other_speed);
+  }
+  stopBalance();
   stop();
 }
 
-int getError(){
+double getError(){
   int farLeftIR_reading = digitalRead(IR_farLeft);
   int leftIR_reading = digitalRead(IR_left);
   int rightIR_reading = digitalRead(IR_right);
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: return 0; break;
-    case 8: return 4; break;
-    case 12: return 3; break;
-    case 14: return 2; break;
+    case 0: return -0.001; break;
+    case 8: return 3; break;
+    case 12: return 2; break;
+    //case 14: return 2; break;
     case 4: return 1; break;
     case 6: return 0; break;
     case 2: return -1; break;
-    case 7: return -2; break;
-    case 3: return -3; break;
-    case 1: return -4; break;
+    //case 7: return -2; break;
+    case 3: return -2; break;
+    case 1: return -3; break;
     case 15: return 0; break;
     default: {
       Serial.println("getError fail");
@@ -349,18 +342,141 @@ int getError(){
   }
 }
 
-void startRotaryCount(){
-  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCount, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCount, CHANGE);
-  clickCounter = 0;
-  prev_clickChange = 0;
+void grab(String food){
+  int finalAngle, initialAngle = 60;
+  if(food == "lectuce"){
+    finalAngle = 135 + grabOffset;
+  } else if (food == "tomato"){
+    finalAngle = 132 + grabOffset;
+  } else if (food == "patty"){
+    finalAngle = 130 + grabOffset;
+  } else if (food == "bun"){
+    finalAngle = 129 + grabOffset;
+  } else if (food == "cheese"){
+    finalAngle = 132 + grabOffset;
+  } else if (food == "plate"){
+    finalAngle = 70 + grabOffset;
+  }
+  ledcWrite(servoCH, map(initialAngle, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
+  while(!microswitch){
+    ledcWrite(clawCH1, 0);
+    ledcWrite(clawCH2, updownSpeed);
+  }
+  ledcWrite(clawCH2, 0);
+  ledcWrite(servoCH, map(finalAngle, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
+  ledcWrite(clawCH1, updownSpeed);
+  ledcWrite(clawCH2, 0);
+  delay(upTime);
+  ledcWrite(clawCH1, 0);
 }
 
-void stopRotaryCount(){
-  detachInterrupt(digitalPinToInterrupt(rotaryPin1));
-  detachInterrupt(digitalPinToInterrupt(rotaryPin2));
-  clickCounter = 0;
-  prev_clickChange = 0;
+void stack(String food){
+  ledcWrite(clawCH1, 0);
+  ledcWrite(clawCH2, updownSpeed);
+  if(food == "lectuce"){
+    delay(1300);  
+  } else if (food == "tomato"){
+    delay(800);
+  } else if (food == "patty"){
+    delay(900);
+  } else if (food == "topBun"){
+    delay(500);
+  } else if (food == "bottomBun"){
+    delay(1000);
+  } else if (food == "cheese"){
+    delay(600);
+  } else if (food == "plate"){
+    delay(1400);
+  }
+  ledcWrite(clawCH2, 0);
+  ledcWrite(servoCH, map(60, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
+  ledcWrite(clawCH1, updownSpeed);
+  ledcWrite(clawCH2, 0);
+  delay(upTime);
+  ledcWrite(clawCH1, 0);
+}
+
+void cook(){
+  while(!microswitch){
+    ledcWrite(clawCH1, 0);
+    ledcWrite(clawCH2, updownSpeed);
+  }
+  ledcWrite(clawCH2, 0);
+  delay(10000);
+  ledcWrite(clawCH1, updownSpeed);
+  ledcWrite(clawCH2, 0);
+  delay(upTime);
+  ledcWrite(clawCH1, 0);
+}
+
+void resetRotaryCount(){
+  clickCounterL = 0;
+  prev_clickL = 0;
+  clickCounterR = 0;
+  prev_clickR = 0;
+}
+
+void clickCountLeft(){
+  clickL = 2 * digitalRead(rotaryPin1) + 1 * digitalRead(rotaryPin2);
+  if(clickL == 1 && prev_clickL == 3 || clickL == 0 && prev_clickL == 1 ||
+   clickL == 2 && prev_clickL == 0 || clickL == 3 && prev_clickL == 2){
+    clickCounterL--;
+   } else if (clickL == 3 && prev_clickL == 1 || clickL == 2 && prev_clickL == 3 ||
+   clickL == 0 && prev_clickL == 2 || clickL == 1 && prev_clickL == 0){
+    clickCounterL++;
+   }
+  prev_clickL = clickL;
+
+}
+
+void clickCountRight(){
+  clickR = 2 * digitalRead(rotaryPin3) + 1 * digitalRead(rotaryPin4);
+  if(clickR == 1 && prev_clickR == 3 || clickR == 0 && prev_clickR == 1 ||
+   clickR == 2 && prev_clickR == 0 || clickR == 3 && prev_clickR == 2){
+    clickCounterR--;
+   } else if (clickR == 3 && prev_clickR == 1 || clickR == 2 && prev_clickR == 3 ||
+   clickR == 0 && prev_clickR == 2 || clickR == 1 && prev_clickR == 0){
+    clickCounterR++;
+   }
+  prev_clickR = clickR;
+}
+
+void balanceMotors(void *null){
+  int clickChangeL = clickCounterL - prevClickCounterL;
+  int clickChangeR = clickCounterR - prevClickCounterR;
+  unsigned long currentTime = millis();
+  unsigned long timeElapsed = currentTime - prevRotaryTime;
+  double speedL = clickChangeL / timeElapsed;
+  double speedR = clickChangeR / timeElapsed;
+  double error = speedR - speedL;
+  double error_sum =+ error * (timeElapsed);
+  double error_difference = timeElapsed != 0 ? (error - prevRotaryError) / (timeElapsed) : 0;
+  double PID = rP * error + rI * error_sum + rD * error_difference;
+  double prev_error = error;
+  prevRotaryTime = currentTime;
+  other_speed = set_speed - PID;
+  vTaskDelay(1 / portTICK_PERIOD_MS);
+}
+
+void startBalance(){
+  prevRotaryError = 0;
+  prevRotaryTime = millis();
+  prevClickCounterL = 0;
+  prevClickCounterR = 0;
+  resetRotaryCount();
+  xTaskCreate(balanceMotors, "balanceMotors", 4096, NULL, 1, &balanceTaskHandle);
+}
+
+void stopBalance(){
+  vTaskDelete(balanceTaskHandle);
+  other_speed = set_speed;
+}
+
+void IRCount(){
+  IRCounter++;
+  if(IRCounter >= position_difference){
+    lineFollowFlag = false;
+  }
 }
 
 void LEDSwitch(){
@@ -389,50 +505,3 @@ void LEDSwitch(){
     digitalWrite(LED4, LOW);
   }
 }
-
-void clickCount(){
-  clickChange = 2 * digitalRead(rotaryPin1) + 1 * digitalRead(rotaryPin2);
-  if(clickChange == 1 && prev_clickChange == 3 || clickChange == 0 && prev_clickChange == 1 ||
-   clickChange == 2 && prev_clickChange == 0 || clickChange == 3 && prev_clickChange == 2){
-    clickCounter--;
-   } else if (clickChange == 3 && prev_clickChange == 1 || clickChange == 2 && prev_clickChange == 3 ||
-   clickChange == 0 && prev_clickChange == 2 || clickChange == 1 && prev_clickChange == 0){
-    clickCounter++;
-   }
-  prev_clickChange = clickChange;
-
-}
-
-void IRCount(){
-  IRCounter++;
-  if(IRCounter >= position_difference){
-    lineFollowFlag = false;
-  }
-}
-
-/*
-void sendFlag(){
-  trigAction.act = true;
-  esp_err_t result = esp_now_send(MAC, (uint8_t *) &trigAction, sizeof(trigAction));
-  if(result == ESP_OK){
-    Serial.println("sent");
-  } else {
-    Serial.println("sendFlag fail");
-  }
-}
-
-void onSend(const uint8_t *mac_addr, esp_now_send_status_t status){
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Success" : "Fail");
-}
-
-void receiveFlag(){
-  go = false;
-  while(!go){
-  }
-}
-
-void onReceive(const uint8_t *mac, const uint8_t *incomingData, int message_length){
-  memcpy(&trigAction, incomingData, sizeof(trigAction));
-  go = true;
-}
-*/
