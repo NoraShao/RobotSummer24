@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=NetP1_2 Pin=U1_U_ReflectanceSensor2-7
+Removed Pin From Net: NetName=NetP1_3 Pin=U1_U_ReflectanceSensor3-7
+Added Pin To Net: NetName=NetP1_3 Pin=U1_U_ReflectanceSensor2-7
+Added Pin To Net: NetName=NetP1_2 Pin=U1_U_ReflectanceSensor3-7
+Added Member To Class: ClassName=U_ReflectanceSensor3 Member=Component J1_U_ReflectanceSensor3 (J1) B4B-XH-A(LF)(SN)

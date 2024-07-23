@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+#include <ESP32Servo.h>
 
 //variables
 #define start_pin 37
-#define IR_sideRight 1
-#define IR_sideLeft 3
+#define IR_sideRight 16
+#define IR_sideLeft 17
 #define IR_farRight 22
 #define IR_right 19
 #define IR_left 8
@@ -31,15 +32,14 @@ const int CH1 = 0;
 const int CH2 = 1;
 const int CH3 = 2;
 const int CH4 = 3;
-const int servoCH = 4;
-const int clawCH1 = 5;
-const int clawCH2 = 6;
+const int clawCH1 = 4;
+const int clawCH2 = 5;
 const int PWMRes = 12;
-const int PWMFreq = 100;
+const int PWMFreq = 750;
 
 const double set_speed = 3000;
 double other_speed = set_speed;
-const int P = 100;
+const int P = 0;
 const int I = 0;
 const int D = 0;
 const int rP = 0;
@@ -49,8 +49,9 @@ const int rD = 0;
 const int serve_area_far = 0;
 const int serve_area_close = 0;
 
-const int updownSpeed = 1000;
-const int grabOffset = 0;
+const int updownSpeed = 2048;
+const int homeAngle = 80;
+volatile int currentAngle = homeAngle;
 const unsigned long upTime = 2000;
 
 volatile int clickL;
@@ -63,12 +64,8 @@ volatile int IRCounter = 0;
 volatile int position_difference;
 volatile bool lineFollowFlag = true;
 
-volatile int prevRotaryError;
-volatile unsigned long prevRotaryTime;
-volatile int prevClickCounterL;
-volatile int prevClickCounterR;
-
 TaskHandle_t balanceTaskHandle;
+Servo myServo;
 
 //functions
 
@@ -123,7 +120,7 @@ void clickCountLeft();
 void clickCountRight();
 //counts rotary clicks on the right wheel
 
-void balanceMotors(void *null);
+void balanceMotors(void *param);
 //controls the right motor to go the same speed as the left
 
 void startBalance();
@@ -165,7 +162,7 @@ void setup() {
   pinMode(rotaryPin2, INPUT_PULLUP);
   pinMode(rotaryPin3, INPUT_PULLUP);
   pinMode(rotaryPin4, INPUT_PULLUP);
-  pinMode(microswitch, INPUT_PULLUP);
+  pinMode(microswitch, INPUT_PULLDOWN);
   
   //output
   pinMode(LED1, OUTPUT);
@@ -178,14 +175,14 @@ void setup() {
   ledcSetup(CH4, PWMFreq, PWMRes);
   ledcSetup(clawCH1, PWMFreq, PWMRes);
   ledcSetup(clawCH2, PWMFreq, PWMRes);
-  ledcSetup(servoCH, PWMFreq, PWMRes);
   ledcAttachPin(IN1, CH1);
   ledcAttachPin(IN2, CH2);
   ledcAttachPin(IN3, CH3);
   ledcAttachPin(IN4, CH4);
   ledcAttachPin(clawIN1, clawCH1);
   ledcAttachPin(clawIN2, clawCH2);
-  ledcAttachPin(servoIN, servoCH);
+  myServo.attach(servoIN);
+  myServo.write(homeAngle);
 }
 
 //loop
@@ -343,38 +340,43 @@ double getError(){
 }
 
 void grab(String food){
-  int finalAngle, initialAngle = 60;
+  int finalAngle;
   if(food == "lectuce"){
-    finalAngle = 135 + grabOffset;
+    finalAngle = 135;
   } else if (food == "tomato"){
-    finalAngle = 132 + grabOffset;
+    finalAngle = 132;
   } else if (food == "patty"){
-    finalAngle = 130 + grabOffset;
+    finalAngle = 130;
   } else if (food == "bun"){
-    finalAngle = 129 + grabOffset;
+    finalAngle = 129;
   } else if (food == "cheese"){
-    finalAngle = 132 + grabOffset;
+    finalAngle = 132;
   } else if (food == "plate"){
-    finalAngle = 70 + grabOffset;
+    finalAngle = 70;
   }
-  ledcWrite(servoCH, map(initialAngle, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
-  while(!microswitch){
+  for(int i = currentAngle; i >= homeAngle; i--){
+    myServo.write(i);
+    delay(10);
+  }
+  currentAngle = homeAngle;
+  while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
+    delay(100);
   }
   ledcWrite(clawCH2, 0);
-  ledcWrite(servoCH, map(finalAngle, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
-  ledcWrite(clawCH1, updownSpeed);
-  ledcWrite(clawCH2, 0);
-  delay(upTime);
-  ledcWrite(clawCH1, 0);
+  for(int i = currentAngle; i <= finalAngle; i++){
+    myServo.write(i);
+    delay(10);
+  }
+  currentAngle = finalAngle;
 }
 
 void stack(String food){
   ledcWrite(clawCH1, 0);
   ledcWrite(clawCH2, updownSpeed);
   if(food == "lectuce"){
-    delay(1300);  
+    delay(700);  
   } else if (food == "tomato"){
     delay(800);
   } else if (food == "patty"){
@@ -386,10 +388,14 @@ void stack(String food){
   } else if (food == "cheese"){
     delay(600);
   } else if (food == "plate"){
-    delay(1400);
+    delay(1500);
   }
   ledcWrite(clawCH2, 0);
-  ledcWrite(servoCH, map(60, 0, 180, ((1 << PWMRes) - 1) / 2, ((1 << PWMRes) - 1)));
+  for(int i = currentAngle; i >= homeAngle; i--){
+    myServo.write(i);
+    delay(10);
+  }
+  currentAngle = homeAngle;
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
   delay(upTime);
@@ -397,9 +403,10 @@ void stack(String food){
 }
 
 void cook(){
-  while(!microswitch){
+  while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
+    delay(100);
   }
   ledcWrite(clawCH2, 0);
   delay(10000);
@@ -441,30 +448,37 @@ void clickCountRight(){
   prev_clickR = clickR;
 }
 
-void balanceMotors(void *null){
-  int clickChangeL = clickCounterL - prevClickCounterL;
-  int clickChangeR = clickCounterR - prevClickCounterR;
-  unsigned long currentTime = millis();
-  unsigned long timeElapsed = currentTime - prevRotaryTime;
-  double speedL = clickChangeL / timeElapsed;
-  double speedR = clickChangeR / timeElapsed;
-  double error = speedR - speedL;
-  double error_sum =+ error * (timeElapsed);
-  double error_difference = timeElapsed != 0 ? (error - prevRotaryError) / (timeElapsed) : 0;
-  double PID = rP * error + rI * error_sum + rD * error_difference;
-  double prev_error = error;
-  prevRotaryTime = currentTime;
-  other_speed = set_speed - PID;
-  vTaskDelay(1 / portTICK_PERIOD_MS);
+void balanceMotors(void *param){
+  int prevRotaryError = 0;
+  unsigned long prevRotaryTime = millis();
+  int prevClickCounterL = 0;
+  int prevClickCounterR = 0;
+  resetRotaryCount();
+  while(1){
+    int clickChangeL = clickCounterL - prevClickCounterL;
+    int clickChangeR = clickCounterR - prevClickCounterR;
+    unsigned long currentTime = millis();
+    unsigned long timeElapsed = currentTime - prevRotaryTime;
+    if(timeElapsed == 0){
+      vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+    double speedL = (double) clickChangeL / timeElapsed;
+    double speedR = (double) clickChangeR / timeElapsed;
+    double error = speedR - speedL;
+    double error_sum = error_sum + error * (timeElapsed);
+    double error_difference = (error - prevRotaryError) / (timeElapsed);
+    double PID = rP * error + rI * error_sum + rD * error_difference;
+    prevRotaryError = error;
+    prevRotaryTime = currentTime;
+    other_speed = set_speed - PID;
+    prevClickCounterL = clickCounterL;
+    prevClickCounterR = clickCounterR;
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
 }
 
 void startBalance(){
-  prevRotaryError = 0;
-  prevRotaryTime = millis();
-  prevClickCounterL = 0;
-  prevClickCounterR = 0;
-  resetRotaryCount();
-  xTaskCreate(balanceMotors, "balanceMotors", 4096, NULL, 1, &balanceTaskHandle);
+  xTaskCreate(balanceMotors, "balanceMotors", 2048, NULL, 1, &balanceTaskHandle);
 }
 
 void stopBalance(){

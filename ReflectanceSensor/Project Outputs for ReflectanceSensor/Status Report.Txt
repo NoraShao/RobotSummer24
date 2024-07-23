@@ -1,0 +1,11 @@
+Output: NC Drill Files
+Type  : NC Drill
+From  : Project [ReflectanceSensor.PrjPcb]
+   Generated File[ReflectanceSensor.LDP]
+   Generated File[ReflectanceSensor.DRR]
+
+
+Files Generated   : 2
+Documents Printed : 0
+
+Finished Output Generation At 11:33:40 PM On 2024-07-04
