@@ -2,6 +2,9 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
+#define button 4
+#define LED 5
+
 // Define the MAC address of the peer (receiver in this case)
 uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9d, 0x66, 0x50}; //robot 1 receiving
 // uint8_t MAC[] = {0x64, 0xb7, 0x08, 0x9c, 0x61, 0x44}; //robot 2 receiving
@@ -26,6 +29,8 @@ void receiveFlag();
 
 void onReceive(const uint8_t *mac, const uint8_t *incomingData, int len);
 // Confirms flag received
+
+void toggleState();
 
 void setup() {
   Serial.begin(115200);
@@ -53,16 +58,16 @@ void setup() {
   // Register callbacks
   esp_now_register_send_cb(onSend);
   esp_now_register_recv_cb(onReceive);
+
+  pinMode(LED, OUTPUT);
+  pinMode(button, INPUT);
+  attachInterrupt(digitalPinToInterrupt(button), toggleState, CHANGE);
 }
 
 void loop() {
-  // Example of sending flag periodically
-  delay(5000); // Wait for 5 seconds
-  sendFlag();
 }
 
 void sendFlag() {
-  trigAction.act = true;
   esp_err_t result = esp_now_send(MAC, (uint8_t *) &trigAction, sizeof(trigAction));
   
   if (result == ESP_OK) {
@@ -88,4 +93,14 @@ void onReceive(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&trigAction, incomingData, sizeof(trigAction));
   Serial.println("Flag received");
   go = true;
+}
+
+void toggleState(){
+  if(digitalRead(button) == HIGH){
+    trigAction.act = true;
+  }
+  if(digitalRead(button) == LOW){
+    trigAction.act = false;
+  }
+  sendFlag();
 }
