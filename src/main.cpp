@@ -10,8 +10,8 @@
 #define IR_right 8
 #define IR_left 7
 #define IR_farLeft 5
-#define IN1 15
-#define IN2 13
+#define IN1 13
+#define IN2 15
 #define IN3 21
 #define IN4 20
 #define MUX1 25
@@ -218,18 +218,17 @@ void setup() {
   clawServo.write(homeAngle);
   pinionServo.attach(servo2IN);
 
-  LED7Flag = true;
-  delay(1000);
-  LED7Flag = false;
-
   //free RTOS
-  //xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDtaskHandle);
+  xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDtaskHandle);
 }
 
 
 //loop
 
 void loop() {
+  goTo(1,4);
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  turn('l');
 }
 
 
@@ -616,40 +615,40 @@ void LEDSwitch(){
 }
 
 void toggleLED(void *params){
-    while(1) { 
-      if (LED1Flag) {
-        changeMUX(0, 0, 0);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+  while(1) { 
+    if (LED1Flag) {
+      changeMUX(0, 1, 0);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    if (LED2Flag) {
+      changeMUX(1, 0, 0);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    if (LED3Flag) {
+      changeMUX(0, 0, 0);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    if (LED4Flag) {
+      changeMUX(1, 1, 0);
+      vTaskDelay(1/portTICK_PERIOD_MS);
       }
-      if (LED2Flag) {
-        changeMUX(0, 0, 1);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+    if (LED5Flag) {
+      changeMUX(0, 0, 1);
+      vTaskDelay(1/portTICK_PERIOD_MS);
       }
-      if (LED3Flag) {
-        changeMUX(0, 1, 0);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-      if (LED4Flag) {
-        changeMUX(0, 1, 1);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-      if (LED5Flag) {
-        changeMUX(1, 0, 0);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-      if (LED6Flag) {
-        changeMUX(1, 0, 1);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-      if (LED7Flag) {
-        changeMUX(1, 1, 0);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-      if (LED8Flag) {
-        changeMUX(1, 1, 1);
-        vTaskDelay(1 / portTICK_PERIOD_MS);
-      }
-   }
+    if (LED6Flag) {
+      changeMUX(1, 0, 1);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    if (LED7Flag) {
+      changeMUX(0, 1, 1);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+    if (LED8Flag) {
+      changeMUX(1, 1, 1);
+      vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+  }
 }
 
 void changeMUX(bool S0, bool S1, bool S2){
