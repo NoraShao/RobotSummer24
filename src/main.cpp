@@ -40,7 +40,7 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 3800;
+const double set_speed = 3000;
 
 //locating serving area
 const int serve_area_far = 0;
@@ -249,18 +249,18 @@ void stop(){
 
 void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right){
   if(left_motor == 'f'){
-    ledcWrite(CH1, speed_left);
+    ledcWrite(CH1, constrain(speed_left, 0, 4096));
     ledcWrite(CH2, 0);
   } else if (left_motor == 'b'){
     ledcWrite(CH1, 0);
-    ledcWrite(CH2, speed_left);
+    ledcWrite(CH2, constrain(speed_left, 0, 4096));
   }
   if(right_motor == 'f'){
-    ledcWrite(CH3, speed_right);
+    ledcWrite(CH3, constrain(speed_right, 0, 4096));
     ledcWrite(CH4, 0);
   } else if (right_motor == 'b'){
     ledcWrite(CH3, 0);
-    ledcWrite(CH4, speed_right);
+    ledcWrite(CH4, constrain(speed_right, 0, 4096));
   }
 }
 
@@ -298,15 +298,24 @@ void linefollow(char motorDirection){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   int error = getError();
-  
   while(error == -10){
     setSpeed('f','f', set_speed, set_speed);
+    getError();
+  }
+  /*
+  while(error == -10){
     LED8Flag = true;
-    error = getError();
+    if(prevError > 0){
+      setSpeed('f','f', 2000, 3000);
     }
-
+    if(prevError < 0){
+      setSpeed('f','f', 3000, 2000);
+    }
+    error = getError();
+  }
+  */
   LED8Flag = false;
-  int P = 20;
+  int P = 50;
   int delta = P * error;
   if(motorDirection == 'f'){
     setSpeed('f','f', set_speed + delta, set_speed - delta);
