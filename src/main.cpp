@@ -39,45 +39,45 @@ void setup() {
 }
 
 void loop() {
+  
 }
 
 void LEDSwitch(){
-  
 }
 
 void toggleLED(void *params){
    while(1) { 
       if (LED1Flag) {
         changeMUX(0, 0, 0);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED2Flag) {
         changeMUX(0, 0, 1);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED3Flag) {
         changeMUX(0, 1, 0);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED4Flag) {
         changeMUX(0, 1, 1);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED5Flag) {
         changeMUX(1, 0, 0);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED6Flag) {
         changeMUX(1, 0, 1);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED7Flag) {
         changeMUX(1, 1, 0);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED8Flag) {
         changeMUX(1, 1, 1);
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
       }
    }
 }
