@@ -166,6 +166,10 @@ void toggleLED(void *params);
 void changeMUX(bool S0, bool S1, bool S2);
 //change multiplexer gate
 
+void cheesePlate();
+
+void salad();
+
 //set up
 
 void setup() {
@@ -318,9 +322,9 @@ void linefollow(char motorDirection){
   int P = 50;
   int delta = P * error;
   if(motorDirection == 'f'){
-    setSpeed('f','f', set_speed + delta, set_speed - delta);
+    setSpeed('f','f', set_speed - delta, set_speed + delta);
   } else if (motorDirection == 'b'){
-    setSpeed('b','b', set_speed - delta, set_speed + delta);
+    setSpeed('b','b', set_speed + delta, set_speed - delta);
   }
   prevError = error;
  }
@@ -455,9 +459,9 @@ void stack(String food){
     vTaskDelay(800 / portTICK_PERIOD_MS);
   } else if (food == "patty"){
     vTaskDelay(900 / portTICK_PERIOD_MS);
-  } else if (food == "topBun"){
+  } else if (food == "topbun"){
     vTaskDelay(500 / portTICK_PERIOD_MS);
-  } else if (food == "bottomBun"){
+  } else if (food == "bottombun"){
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   } else if (food == "cheese"){
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -655,4 +659,53 @@ void changeMUX(bool S0, bool S1, bool S2){
   digitalWrite(MUX1, S0);
   digitalWrite(MUX2, S1);
   digitalWrite(MUX3, S2);
+}
+
+void cheesePlate(){
+  goTo(0,2);
+  turn('r');
+  upTo(24);
+  grab("cheese");
+  backUp();
+  turn('l');
+  goTo(2,6);
+  turn('l');
+  upTo(24);
+  stack("cheese");
+  grab("plate");
+  backUp();
+  turn('l');
+  locateServeArea(1,'f');
+  turn('r');
+  upTo(24);
+  stack("plate");
+}
+
+void salad(){
+  goTo(0,2);
+  turn('l');
+  upTo(24);
+  grab("tomato");
+  backUp();
+  turn('r');
+  goTo(2,6);
+  turn('l');
+  upTo(24);
+  stack("tomato");
+  grab("plate");
+  backUp();
+  movePlatform("plate");
+  stack("plate");
+  turn('r');
+  turn('r');
+  upTo(24);
+  grab("lettuce");
+  backUp();
+  stack("lettuce");
+  turn('r');
+  locateServeArea(1,'f');
+  turn('l');
+  upTo(24);
+  grab("plate");
+  stack("plate");
 }
