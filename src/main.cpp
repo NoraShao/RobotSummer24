@@ -5,11 +5,11 @@
 
 //variables
 #define IR_sideRight 22
-#define IR_sideLeft 10
 #define IR_farRight 19
 #define IR_right 8
 #define IR_left 7
 #define IR_farLeft 5
+#define IR_sideLeft 10
 #define IN1 13
 #define IN2 15
 #define IN3 21
@@ -34,13 +34,13 @@ const int CH1 = 4;
 const int CH2 = 5;
 const int CH3 = 2;
 const int CH4 = 3;
-const int clawCH1 = 0;
-const int clawCH2 = 1;
+const int clawCH1 = 1;
+const int clawCH2 = 6;
 const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 1000;
+const double set_speed = 3800;
 
 //locating serving area
 const int serve_area_far = 0;
@@ -59,11 +59,12 @@ const int bunAngle = 123;
 const int plateAngle = 106;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
+
 const unsigned long upTime = 2000;
+const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
 const int CCWPW = 1700;
-const int servoSpeed = 150;
 const int foodPlatformAngle = 0;
 const int platePlatformAngle = 0;
 Servo clawServo;
@@ -71,10 +72,10 @@ Servo pinionServo;
 
 //rotary
 volatile int clickL;
-volatile int clickCounterL;
-volatile int prev_clickL;
 volatile int clickR;
+volatile int clickCounterL;
 volatile int clickCounterR;
+volatile int prev_clickL;
 volatile int prev_clickR;
 volatile int IRCounter = 0;
 volatile int position_difference = 100;
@@ -218,7 +219,7 @@ void setup() {
   clawServo.write(homeAngle);
   pinionServo.attach(servo2IN);
 
-  //free RTOS
+  //freeRTOS
   xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDtaskHandle);
 }
 
@@ -226,9 +227,9 @@ void setup() {
 //loop
 
 void loop() {
-  goTo(1,4);
-  vTaskDelay(1000/portTICK_PERIOD_MS);
-  turn('l');
+  linefollow('f');
+  //turn('l');
+  //goTo(2,5)
 }
 
 
@@ -236,7 +237,7 @@ void loop() {
 
 void shutDown(){
   stop();
-  while(1){LED7Flag = true;}
+  while(1){LED8Flag = true;}
 }
 
 void stop(){
@@ -264,7 +265,6 @@ void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right
 }
 
 void turn(char direction){
-  resetRotaryCount();
   LED7Flag = true;
   if(direction == 'r'){
     setSpeed('b','f', set_speed, set_speed);
@@ -298,32 +298,22 @@ void linefollow(char motorDirection){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   int error = getError();
-
-  while(error == 10){
+  
+  while(error == -10){
     setSpeed('f','f', set_speed, set_speed);
-    error = getError();
-    }
-
-  if(error == -10){
     LED8Flag = true;
-    stop();
-    vTaskDelay(200/portTICK_PERIOD_MS);
-    if(prevError > 0){
-      turn('l');
-    } else if(prevError < 0){
-      turn('r');
-    }
     error = getError();
-    LED8Flag = false;
-  }
+    }
 
-  int P = set_speed / 4;
+  LED8Flag = false;
+  int P = 20;
   int delta = P * error;
   if(motorDirection == 'f'){
     setSpeed('f','f', set_speed + delta, set_speed - delta);
   } else if (motorDirection == 'b'){
     setSpeed('b','b', set_speed - delta, set_speed + delta);
   }
+  prevError = error;
  }
 }
 
@@ -389,15 +379,15 @@ double getError(){
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
     case 0: return -10; break;
-    case 8: return 3; break;
-    case 12: return 2.5; break;
+    case 8: return 4; break;
+    case 12: return 3; break;
     case 14: return 2; break;
     case 4: return 1; break;
     case 6: return 0; break;
     case 2: return -1; break;
     case 7: return -2; break;
-    case 3: return -2.5; break;
-    case 1: return -3; break;
+    case 3: return -3; break;
+    case 1: return -4; break;
     case 15: return 10; break;
     default: {
       LED7Flag = true;
@@ -504,6 +494,7 @@ void movePlatform(String food){
     servoMove(platePlatformAngle);
   }
 }
+
 void servoMove(int angle){
   int pulseWidth;
   if(angle > 0){
