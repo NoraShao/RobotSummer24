@@ -97,6 +97,8 @@ TaskHandle_t LEDtaskHandle;
 
 //functions
 
+void startUp();
+
 void shutDown();
 //permanetly stops loop until reset
 
@@ -176,10 +178,6 @@ void setup() {
   
   Serial.begin(115200);
 
-  attachInterrupt(digitalPinToInterrupt(IR_farRight), LEDSwitch, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(IR_right), LEDSwitch, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(IR_left), LEDSwitch, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(IR_farLeft), LEDSwitch, CHANGE);
   attachInterrupt(digitalPinToInterrupt(IR_sideLeft), IRCount, HIGH);
   attachInterrupt(digitalPinToInterrupt(IR_sideRight), IRCount, HIGH);
   attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCountLeft, CHANGE);
@@ -224,13 +222,14 @@ void setup() {
   pinionServo.attach(servo2IN);
 
   //freeRTOS
-  xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDtaskHandle);
+  xTaskCreate(toggleLED, "toggleLED", 4096, NULL, 1, &LEDtaskHandle);
 }
 
 
 //loop
 
 void loop() {
+  startUp();
   linefollow('f');
   //turn('l');
   //goTo(2,5)
@@ -238,6 +237,16 @@ void loop() {
 
 
 //function definitions
+
+void startUp(){
+  LED7Flag = true;
+  vTaskDelay(1000/ portTICK_PERIOD_MS);
+  LED7Flag = false;
+  vTaskDelay(1000/ portTICK_PERIOD_MS);
+  LED7Flag = true;
+  vTaskDelay(1000/ portTICK_PERIOD_MS);
+  LED7Flag = false;
+}
 
 void shutDown(){
   stop();
@@ -296,28 +305,14 @@ void turn(char direction){
 void linefollow(char motorDirection){
   int prevError = 0;
  while(lineFollowFlag){
-  int farLeftIR_reading = digitalRead(IR_farLeft);
-  int leftIR_reading = digitalRead(IR_left);
-  int rightIR_reading = digitalRead(IR_right);
-  int farRightIR_reading = digitalRead(IR_farRight);
-  int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   int error = getError();
-  while(error == -10){
-    setSpeed('f','f', set_speed, set_speed);
-    getError();
-  }
-  /*
-  while(error == -10){
-    LED8Flag = true;
-    if(prevError > 0){
-      setSpeed('f','f', 2000, 3000);
+  if(error == -10){
+    while(error != 0){
+      setSpeed('b','b', set_speed, set_speed);
+      LED8Flag = true;
+      error = getError();
     }
-    if(prevError < 0){
-      setSpeed('f','f', 3000, 2000);
-    }
-    error = getError();
   }
-  */
   LED8Flag = false;
   int P = 50;
   int delta = P * error;
@@ -401,7 +396,7 @@ double getError(){
     case 7: return -2; break;
     case 3: return -3; break;
     case 1: return -4; break;
-    case 15: return 10; break;
+    case 15: return 0; break;
     default: {
       LED7Flag = true;
       vTaskDelay(250/portTICK_PERIOD_MS);
@@ -576,71 +571,31 @@ void IRCount(){
       lineFollowFlag = false;
     }
   }
-  
-  if(digitalRead(IR_sideLeft) == 1){
-    LED5Flag = true;
-  }
-  if(digitalRead(IR_sideRight) == 1){
-    LED6Flag = true;
-  }
-  if(digitalRead(IR_farRight) == 0){
-    LED5Flag = false;
-  }
-  if(digitalRead(IR_right) == 0){
-    LED6Flag = false;
-  }
-}
-
-void LEDSwitch(){
-  if(digitalRead(IR_farRight) == 1){
-    LED1Flag = true;
-  }
-  if(digitalRead(IR_right) == 1){
-    LED2Flag = true;
-  }
-  if(digitalRead(IR_left) == 1){
-    LED3Flag = true;
-  }
-  if(digitalRead(IR_farLeft) == 1){
-    LED4Flag = true;
-  }
-  if(digitalRead(IR_farRight) == 0){
-    LED1Flag = false;
-  }
-  if(digitalRead(IR_right) == 0){
-    LED2Flag = false;
-  }
-  if(digitalRead(IR_left) == 0){
-    LED3Flag = false;
-  }
-  if(digitalRead(IR_farLeft) == 0){
-    LED4Flag = false;
-  }
 }
 
 void toggleLED(void *params){
   while(1) { 
-    if (LED1Flag) {
+    if (digitalRead(IR_farRight)) {
       changeMUX(0, 1, 0);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
-    if (LED2Flag) {
+    if (digitalRead(IR_right)) {
       changeMUX(1, 0, 0);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
-    if (LED3Flag) {
+    if (digitalRead(IR_left)) {
       changeMUX(0, 0, 0);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
-    if (LED4Flag) {
+    if (digitalRead(IR_farLeft)) {
       changeMUX(1, 1, 0);
       vTaskDelay(1/portTICK_PERIOD_MS);
       }
-    if (LED5Flag) {
+    if (digitalRead(IR_sideLeft)) {
       changeMUX(0, 0, 1);
       vTaskDelay(1/portTICK_PERIOD_MS);
       }
-    if (LED6Flag) {
+    if (digitalRead(IR_sideRight)) {
       changeMUX(1, 0, 1);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
