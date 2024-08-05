@@ -82,22 +82,20 @@ volatile int position_difference = 100;
 volatile bool lineFollowFlag = true;
 
 //LEDs
-volatile bool LED1Flag = false;
-volatile bool LED2Flag = false;
-volatile bool LED3Flag = false;
-volatile bool LED4Flag = false;
-volatile bool LED5Flag = false;
-volatile bool LED6Flag = false;
 volatile bool LED7Flag = false;
 volatile bool LED8Flag = false;
 
 //task handling
-TaskHandle_t LEDtaskHandle;
-
+TaskHandle_t LEDHandle;
+TaskHandle_t goToFirstHandle;
+TaskHandle_t goToCounterHandle;
+TaskHandle_t grabAndStackHandle;
+TaskHandle_t serveHandle;
 
 //functions
 
 void startUp();
+//flashes on reset
 
 void shutDown();
 //permanetly stops loop until reset
@@ -123,7 +121,7 @@ void upTo(int upTo_delay);
 void backUp();
 //goes back to main black line
 
-void locateServeArea(int currentPosition, char motor_direction);
+void locateServeArea(int currentPosition);
 //goes to horizontal position of serving area
 
 double getError();
@@ -138,8 +136,8 @@ void stack(String food);
 void cook();
 //holds food on stove for 10 seconds
 
-void movePlatform(String food);
-//moves platform to specified location
+void stackOnPlatform(String food);
+//stacks food on platform
 
 void servoMove(int angle);
 //moves the servo to a specified angle
@@ -159,18 +157,30 @@ void clickCountRight();
 void IRCount();
 //counts number of activations from wing IR sensors
 
-void LEDSwitch();
-//Toggles LED deoending on state of IR sensor
-
 void toggleLED(void *params);
 //Toggles LED
 
 void changeMUX(bool S0, bool S1, bool S2);
 //change multiplexer gate
 
+void moveToNextCounter(int initialPosition, int finalPosition, char firstTurn, char secondTurn, int upToClicks);
+//moves from one counter to another
+
+void grabAndStack(String food, char platformIncluded);
+//grabs and stacks food
+
+void goToServe(int initialPostion);
+//goes to serve area
+
+void goToFirstCounter(int finalPosition, char side, int upToClicks);
+//goes to counter from startinf position
+
 void cheesePlate();
+//makes cheese plate
 
 void salad();
+//makes salad
+
 
 //set up
 
@@ -222,14 +232,19 @@ void setup() {
   pinionServo.attach(servo2IN);
 
   //freeRTOS
-  xTaskCreate(toggleLED, "toggleLED", 4096, NULL, 1, &LEDtaskHandle);
+  xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDHandle);
+  // xTaskCreate(goToFirstCounter, "goToFirst", 2048, NULL, 1, &goToFirstHandle);
+  // xTaskCreate(goToServe, "serve", 2048, NULL, 1, &serveHandle);
+  // xTaskCreate(moveToNextCounter, "goToCounter", 2048, NULL, 1, &goToCounterHandle);
+  // xTaskCreate(grabAndStack, "grabAndStack", 2048, NULL, 1, &grabAndStackHandle);
+  
 }
 
 
 //loop
 
 void loop() {
-  //startUp();
+  startUp();
   linefollow('f');
   //turn('l');
   //goTo(2,5)
@@ -261,18 +276,18 @@ void stop(){
 
 void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right){
   if(left_motor == 'f'){
-    ledcWrite(CH1, constrain(speed_left, 0, 4096));
+    ledcWrite(CH1, constrain(speed_left, 0, (1 << 12) - 1));
     ledcWrite(CH2, 0);
   } else if (left_motor == 'b'){
     ledcWrite(CH1, 0);
-    ledcWrite(CH2, constrain(speed_left, 0, 4096));
+    ledcWrite(CH2, constrain(speed_left, 0, (1 << 12) - 1));
   }
   if(right_motor == 'f'){
-    ledcWrite(CH3, constrain(speed_right, 0, 4096));
+    ledcWrite(CH3, constrain(speed_right, 0, (1 << 12) - 1));
     ledcWrite(CH4, 0);
   } else if (right_motor == 'b'){
     ledcWrite(CH3, 0);
-    ledcWrite(CH4, constrain(speed_right, 0, 4096));
+    ledcWrite(CH4, constrain(speed_right, 0, (1 << 12) - 1));
   }
 }
 
@@ -359,11 +374,13 @@ void backUp(){
     setSpeed('b','b', set_speed, set_speed);
     error = getError();
   }
+  setSpeed('f','f',1500,1500);
+  vTaskDelay(200 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
 
-void locateServeArea(int currentPosition, char motor_direction){
+void locateServeArea(int currentPosition){
   LED7Flag = true;
   int distance_to_area;
   if(currentPosition == 1 || currentPosition == 6){
@@ -372,7 +389,7 @@ void locateServeArea(int currentPosition, char motor_direction){
     distance_to_area = serve_area_close;
   }
   while(clickCounterL <= distance_to_area){
-    setSpeed(motor_direction, motor_direction, set_speed, set_speed);
+    setSpeed('f', 'f', set_speed, set_speed);
   }
   stop();
   LED7Flag = false;
@@ -490,7 +507,7 @@ void cook(){
   ledcWrite(clawCH1, 0);
 }
 
-void movePlatform(String food){
+void stackOnPlatform(String food){
   pinionServo.writeMicroseconds(CWPW);
   while(!digitalRead(limitSwitch)){
   vTaskDelay(100/portTICK_PERIOD_MS);
@@ -500,6 +517,12 @@ void movePlatform(String food){
   } else if (food == "plate"){
     servoMove(platePlatformAngle);
   }
+  stack(food);
+  pinionServo.writeMicroseconds(CWPW);
+  while(!digitalRead(limitSwitch)){
+  vTaskDelay(100/portTICK_PERIOD_MS);
+  }
+  pinionServo.writeMicroseconds(stopPW);
 }
 
 void servoMove(int angle){
@@ -615,6 +638,55 @@ void changeMUX(bool S0, bool S1, bool S2){
   digitalWrite(MUX3, S2);
 }
 
+void moveToNextCounter(int initialPosition, int finalPosition, char firstTurn, char secondTurn, int upToClicks){
+  backUp();
+  turn(firstTurn);
+  goTo(initialPosition, finalPosition);
+  turn(secondTurn);
+  upTo(upToClicks);
+}
+
+void grabAndStack(String food, char platformIncluded){
+  grab(food);
+  if(platformIncluded == 'y'){
+  stackOnPlatform(food);
+  } else if (platformIncluded == 'n'){
+    stack(food);
+  }
+}
+
+void goToServe(int initialPostion){
+  LED7Flag = true;
+  backUp();
+  if(initialPostion == 1){
+    turn('l');
+    locateServeArea(1);
+    turn('r');
+    setSpeed('f','f',2300,2300);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  } else if (initialPostion == 6){
+    turn('r');
+    locateServeArea(6);
+    turn('l');
+    setSpeed('f','f',2300,2300);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  } else if (initialPostion == 4){
+    turn('l');
+    locateServeArea(4);
+    turn('l');
+    setSpeed('f','f',2300,2300);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+  stop();
+  LED7Flag = false;
+}
+
+void goToFirstCounter(int finalPosition, char side, int upToClicks){
+  goTo(0,finalPosition);
+  turn(side);
+  upTo(upToClicks);
+}
+
 void cheesePlate(){
   goTo(0,2);
   turn('r');
@@ -629,7 +701,7 @@ void cheesePlate(){
   grab("plate");
   backUp();
   turn('l');
-  locateServeArea(1,'f');
+  locateServeArea(1);
   turn('r');
   upTo(24);
   stack("plate");
@@ -648,8 +720,7 @@ void salad(){
   stack("tomato");
   grab("plate");
   backUp();
-  movePlatform("plate");
-  stack("plate");
+  stackOnPlatform("plate");
   turn('r');
   turn('r');
   upTo(24);
@@ -657,7 +728,7 @@ void salad(){
   backUp();
   stack("lettuce");
   turn('r');
-  locateServeArea(1,'f');
+  locateServeArea(1);
   turn('l');
   upTo(24);
   grab("plate");
