@@ -229,12 +229,11 @@ void setup() {
 //loop
 
 void loop() {
-  startUp();
+  //startUp();
   linefollow('f');
   //turn('l');
   //goTo(2,5)
 }
-
 
 //function definitions
 
@@ -307,11 +306,11 @@ void linefollow(char motorDirection){
  while(lineFollowFlag){
   int error = getError();
   if(error == -10){
-    while(error != 0){
+    while(abs(error) <= 2){
       setSpeed('b','b', set_speed, set_speed);
       LED8Flag = true;
-      error = getError();
-    }
+      error = getError();    
+      }
   }
   LED8Flag = false;
   int P = 50;
