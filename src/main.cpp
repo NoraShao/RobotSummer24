@@ -61,15 +61,15 @@ const int plateAngle = 75;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 2000;
+const unsigned long upTime = 3500;
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
 const int CCWPW = 1700;
 const int foodPlatformAngle = 0;
 const int platePlatformAngle = 0;
-const int plateDelay = 405;
-const int foodDelay = 650;
+const int plateDelay = 550;
+const int foodDelay = 700; // 750?
 Servo clawServo;
 Servo pinionServo;
 
@@ -141,6 +141,12 @@ void cook();
 
 void stackOnPlatform(String food);
 //stacks food on platform
+
+void serveFromPlatform();
+//serve plate from platform
+
+void homePlatform();
+//moves platform to home position
 
 void servoMove(int angle);
 //moves the servo to a specified angle
@@ -537,12 +543,27 @@ void stackOnPlatform(String food){
     vTaskDelay(plateDelay/portTICK_PERIOD_MS);
     pinionServo.writeMicroseconds(stopPW);
   }
-  stack(food);
+}
+
+void serveFromPlatform() {
+  ledcWrite(clawCH1, 0);
+  ledcWrite(clawCH2, updownSpeed);
+  grab("plate");
+  homePlatform();
+  stack("plate");
+}
+
+void homePlatform() {
   while(!digitalRead(limitSwitch)){
     pinionServo.writeMicroseconds(CWPW);
     vTaskDelay(100/portTICK_PERIOD_MS);
   }
   pinionServo.writeMicroseconds(stopPW);
+  vTaskDelay(100/portTICK_PERIOD_MS);
+  pinionServo.writeMicroseconds(CCWPW); // move platform out to account for startup jump
+  vTaskDelay(100/portTICK_PERIOD_MS);
+  pinionServo.writeMicroseconds(stopPW); // for testing only
+  vTaskDelay(3000/portTICK_PERIOD_MS);
 }
 
 // void servoMove(int angle){
@@ -671,6 +692,8 @@ void grabAndStack(String food, char platformIncluded){
   grab(food);
   if(platformIncluded == 'y'){
     stackOnPlatform(food);
+    homePlatform();
+    serveFromPlatform();
   } else if (platformIncluded == 'n'){
     stack(food);
   }
@@ -723,7 +746,7 @@ void cheesePlate(){
   backUp();
   turn('l');
   locateServeArea(1);
-  turn('r');
+  turn('l');
   upTo(24);
   stack("plate");
 }
