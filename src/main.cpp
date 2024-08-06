@@ -50,13 +50,14 @@ const int serve_area_close = 0;
 unsigned long prevTime = millis();
 
 //claw
-const int homeAngle = 80;
-const int lettuceAngle = 128;
-const int tomatoAngle = 124;
-const int cheeseAngle = 130;
-const int pattyAngle = 124;
-const int bunAngle = 123;
-const int plateAngle = 106;
+const int homeAngle = 52;
+const int lettuceAngle = 101;
+const int tomatoAngle = 97;
+const int cheeseAngle = 97; // flat sides (not diagonally on corners)
+const int pattyAngle = 96;
+const int topBunAngle = 98;
+const int bottomBunAngle = 95;
+const int plateAngle = 75;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
@@ -67,6 +68,8 @@ const int CWPW = 1300;
 const int CCWPW = 1700;
 const int foodPlatformAngle = 0;
 const int platePlatformAngle = 0;
+const int plateDelay = 405;
+const int foodDelay = 650;
 Servo clawServo;
 Servo pinionServo;
 
@@ -245,9 +248,13 @@ void setup() {
 
 void loop() {
   startUp();
-  linefollow('f');
+  // linefollow('f');
   //turn('l');
   //goTo(2,5)
+
+  // grabAndStack("palte", 'y');
+  // clawUp();
+  clawServo.writeMicroseconds(CCWPW);
 }
 
 //function definitions
@@ -424,35 +431,41 @@ double getError(){
 void grab(String food){
   LED7Flag = true;
   int finalAngle;
-  if(food == "lecttuce"){
+  if(food == "lettuce"){
     finalAngle = lettuceAngle;
   } else if (food == "tomato"){
     finalAngle = tomatoAngle;
   } else if (food == "patty"){
     finalAngle = pattyAngle;
-  } else if (food == "bun"){
-    finalAngle = bunAngle;
+  } else if (food == "topBun"){
+    finalAngle = topBunAngle;
+  } else if (food == "bottomBun"){
+    finalAngle = bottomBunAngle;
   } else if (food == "cheese"){
     finalAngle = cheeseAngle; 
   } else if (food == "plate"){
     finalAngle = plateAngle;
   }
+  // open claw
   for(int i = currentAngle; i >= homeAngle; i--){
     clawServo.write(i);
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   currentAngle = homeAngle;
+  // lower claw to counter
   while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
+  // close claw to clamp food
   for(int i = currentAngle; i <= finalAngle; i++){
     clawServo.write(i);
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   currentAngle = finalAngle;
+  // raise claw
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
   vTaskDelay(upTime / portTICK_PERIOD_MS);
@@ -462,9 +475,10 @@ void grab(String food){
 
 void stack(String food){
   LED7Flag = true;
+  // lower claw to stack
   ledcWrite(clawCH1, 0);
   ledcWrite(clawCH2, updownSpeed);
-  if(food == "lecttuce"){
+  if(food == "lettuce"){
     vTaskDelay(700 / portTICK_PERIOD_MS);
   } else if (food == "tomato"){
     vTaskDelay(800 / portTICK_PERIOD_MS);
@@ -480,11 +494,13 @@ void stack(String food){
     vTaskDelay(1500 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
+  // open claw to release food
   for(int i = currentAngle; i >= homeAngle; i--){
     clawServo.write(i);
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   currentAngle = homeAngle;
+  // raise claw and stop
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
   vTaskDelay(upTime / portTICK_PERIOD_MS);
@@ -508,46 +524,51 @@ void cook(){
 }
 
 void stackOnPlatform(String food){
-  pinionServo.writeMicroseconds(CWPW);
   while(!digitalRead(limitSwitch)){
-  vTaskDelay(100/portTICK_PERIOD_MS);
+    pinionServo.writeMicroseconds(CWPW);
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
   if(food != "plate"){
-    servoMove(foodPlatformAngle);
+    pinionServo.writeMicroseconds(CCWPW);
+    vTaskDelay(foodDelay/portTICK_PERIOD_MS);
+    pinionServo.writeMicroseconds(stopPW);
   } else if (food == "plate"){
-    servoMove(platePlatformAngle);
+    pinionServo.writeMicroseconds(CCWPW);
+    vTaskDelay(plateDelay/portTICK_PERIOD_MS);
+    pinionServo.writeMicroseconds(stopPW);
   }
   stack(food);
-  pinionServo.writeMicroseconds(CWPW);
   while(!digitalRead(limitSwitch)){
-  vTaskDelay(100/portTICK_PERIOD_MS);
+    pinionServo.writeMicroseconds(CWPW);
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
   pinionServo.writeMicroseconds(stopPW);
 }
 
-void servoMove(int angle){
-  int pulseWidth;
-  if(angle > 0){
-    pulseWidth = CWPW;
-  } else if(angle < 0){
-    pulseWidth = CCWPW;
-  } else {
-    pulseWidth = stopPW;
-  }
-  double rotationPeriod = (abs(angle) / servoSpeed) * 6000;
-  pinionServo.writeMicroseconds(pulseWidth);
-  vTaskDelay(rotationPeriod);
-  pinionServo.writeMicroseconds(stopPW);
-}
+// void servoMove(int angle){
+//   int pulseWidth;
+//   if(angle > 0){
+//     pulseWidth = CWPW;
+//   } else if(angle < 0){
+//     pulseWidth = CCWPW;
+//   } else {
+//     pulseWidth = stopPW;
+//   }
+//   double rotationPeriod = (abs(angle) / servoSpeed) * 6000;
+//   pinionServo.writeMicroseconds(pulseWidth);
+//   vTaskDelay(rotationPeriod);
+//   pinionServo.writeMicroseconds(stopPW);
+// }
 
 void clawUp(){
   while(digitalRead(clawMovePin)){
-    if(digitalRead(microswitch) == 0){
+    while(digitalRead(microswitch) == 0){
       ledcWrite(clawCH1, updownSpeed);
       ledcWrite(clawCH2, 0);
-    } else if(digitalRead(microswitch) == 1){
-      ledcWrite(clawCH2, updownSpeed);
+    }
+    while(digitalRead(microswitch) == 1){
       ledcWrite(clawCH1, 0);
+      ledcWrite(clawCH2, updownSpeed);
     }
   }
   ledcWrite(clawCH2, 0);
@@ -649,7 +670,7 @@ void moveToNextCounter(int initialPosition, int finalPosition, char firstTurn, c
 void grabAndStack(String food, char platformIncluded){
   grab(food);
   if(platformIncluded == 'y'){
-  stackOnPlatform(food);
+    stackOnPlatform(food);
   } else if (platformIncluded == 'n'){
     stack(food);
   }
