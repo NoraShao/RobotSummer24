@@ -40,8 +40,9 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 3000;
+const double set_speed = 2800;
 const double turn_speed = 1500;
+const double to_counter_time = 2000; // robot2 time
 
 //locating serving area
 const int serve_area_far = 4000;
@@ -261,36 +262,40 @@ void setup() {
 
 void loop() {
   //pinionServo.writeMicroseconds(stopPW);
-  //startUp();
+  startUp();
   //ledcWrite(clawCH1, updownSpeed);
   //ledcWrite(clawCH2, 0);
   // cheesePlate();
   // shutDown();
   // linefollow('f');
-  // goTo(1, 3);
-  // turn('r');
-  // shutDown();
+
+  goTo(1, 6);
+  turn('l');
+  linefollowTimer('f', 800);
+  grab("plate");
+  backUp();
+  shutDown();
 
   // clawUp();
   // ledcWrite(clawCH1, updownSpeed);
   // ledcWrite(clawCH2, 0);
 
-  homePlatform();
-  grab("plate");
-  movePlatform("plate");
-  release();
-  homePlatform();
-  delay(1000);  //stack other food on platform & move to serve area here
-  grab("tomato");
-  movePlatform("tomato");
-  release();
-  homePlatform();
-  delay(1000); //move to serving area
-  movePlatform("plate");
-  grab("plate");
-  homePlatform();
-  release();
-  delay(1500);  
+  // homePlatform();
+  // grab("plate");
+  // movePlatform("plate");
+  // release();
+  // homePlatform();
+  // delay(1000);  //stack other food on platform & move to serve area here
+  // grab("tomato");
+  // movePlatform("tomato");
+  // release();
+  // homePlatform();
+  // delay(1000); //move to serving area
+  // movePlatform("plate");
+  // grab("plate");
+  // homePlatform();
+  // release();
+  // delay(1500);  
 
   // homePlatform();
   // delay(1000);
@@ -440,7 +445,7 @@ while(time > currentTime - initialTimer){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('f','f', set_speedT, set_speedT); break;
+    case 0: setSpeed('b','b', set_speed * 0.75, set_speed * 0.75); break;
     case 8: setSpeed('f','f', set_speedT, 0.65); break;
     case 12: setSpeed('f','f', set_speedT, set_speedT * 0.75); break;
     case 14: setSpeed('f','f', set_speedT, set_speedT * 0.8); break;
@@ -457,6 +462,7 @@ while(time > currentTime - initialTimer){
   }
   currentTime = millis();
  }
+ stop();
 }
 
 void goTo(int initialPosition, int finalPosition){
@@ -659,14 +665,6 @@ void movePlatform(String food){
   }
 }
 
-void serveFromPlatform() {
-  ledcWrite(clawCH1, 0);
-  ledcWrite(clawCH2, updownSpeed);
-  grab("plate");
-  homePlatform();
-  stack("plate");
-}
-
 void homePlatform() {
   while(!digitalRead(limitSwitch)){
     pinionServo.writeMicroseconds(CWPW);
@@ -838,23 +836,39 @@ void goToFirstCounter(int finalPosition, char side, int upToClicks){
   upTo(upToClicks);
 }
 
+void grabStackOnPlatform(String food, char finalTurnDirection) {
+  grab(food);
+  backUp();
+  turn(finalTurnDirection);
+  movePlatform(food);
+  release();
+  homePlatform();
+}
+
+void serveFromPlatform() {
+  ledcWrite(clawCH1, 0);
+  ledcWrite(clawCH2, updownSpeed);
+  grab("plate");
+  homePlatform();
+}
+
 void cheesePlate(){
   goTo(0,1);
   turn('r');
-  linefollowTimer('f', 800);
+  linefollowTimer('f', 800); // robot2 delay
   grab("cheese"); 
   backUp();
   turn('l');
   goTo(1,6);
   turn('l');
-  linefollowTimer('f', 2000);
+  linefollowTimer('f', 2000); // robot2 delay
   stack("cheese");
   grab("plate");
   backUp();
   turn('l');
   locateServeArea(1);
   lastTurn('l');
-  linefollowTimer('f', 2000);
+  linefollowTimer('f', 2000); //robot2 delay
   stop();
   stack("plate");
 }
@@ -862,29 +876,21 @@ void cheesePlate(){
 void salad(){
   goTo(0,2);
   turn('l');
-  upTo(24);
+  linefollowTimer('f', 800); // robot2 delay
   grab("tomato");
   backUp();
   turn('r');
   goTo(2,6);
   turn('l');
-  upTo(24);
+  linefollowTimer('f', to_counter_time);
   stack("tomato");
-  grab("plate");
-  backUp();
-  movePlatform("food");
-  homePlatform();
-  serveFromPlatform();
-  turn('r');
-  turn('r');
-  upTo(24);
-  grab("lettuce");
-  backUp();
-  stack("lettuce");
-  turn('r');
+  grabStackOnPlatform("plate", 'l');
+  turn('l'); // to turn 180?
+  linefollowTimer('f', to_counter_time);
+  grabStackOnPlatform("lettuce", 'r');
   locateServeArea(1);
   turn('l');
-  upTo(24);
-  grab("plate");
-  stack("plate");
+  serveFromPlatform();
+  linefollowTimer('f', to_counter_time);
+  release();
 }
