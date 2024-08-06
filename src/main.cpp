@@ -50,19 +50,19 @@ const int serve_area_close = 0;
 unsigned long prevTime = millis();
 
 //claw
-const int homeAngle = 52;
-const int lettuceAngle = 101;
-const int tomatoAngle = 97;
-const int cheeseAngle = 97; // flat sides (not diagonally on corners)
-const int pattyAngle = 96;
-const int topBunAngle = 98;
-const int bottomBunAngle = 95;
-const int plateAngle = 75;
 const int offsetAngle = -15;
+const int homeAngle = 52 + offsetAngle;
+const int lettuceAngle = 101 + offsetAngle;
+const int tomatoAngle = 97 + offsetAngle;
+const int cheeseAngle = 97 + offsetAngle; // flat sides (not diagonally on corners)
+const int pattyAngle = 96 + offsetAngle;
+const int topBunAngle = 98 + offsetAngle;
+const int bottomBunAngle = 95 + offsetAngle;
+const int plateAngle = 75 + offsetAngle;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 3500;
+const unsigned long upTime = 1000;
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -449,19 +449,19 @@ void grab(String food){
   LED7Flag = true;
   int finalAngle;
   if(food == "lettuce"){
-    finalAngle = lettuceAngle + offsetAngle;
+    finalAngle = lettuceAngle;
   } else if (food == "tomato"){
-    finalAngle = tomatoAngle + offsetAngle;
+    finalAngle = tomatoAngle;
   } else if (food == "patty"){
-    finalAngle = pattyAngle + offsetAngle;
+    finalAngle = pattyAngle;
   } else if (food == "topBun"){
-    finalAngle = topBunAngle + offsetAngle;
+    finalAngle = topBunAngle;
   } else if (food == "bottomBun"){
-    finalAngle = bottomBunAngle + offsetAngle;
+    finalAngle = bottomBunAngle;
   } else if (food == "cheese"){
-    finalAngle = cheeseAngle + offsetAngle; 
+    finalAngle = cheeseAngle; 
   } else if (food == "plate"){
-    finalAngle = plateAngle + offsetAngle;
+    finalAngle = plateAngle;
   }
   // open claw
   for(int i = currentAngle; i >= homeAngle; i--){
