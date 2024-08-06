@@ -52,12 +52,14 @@ unsigned long prevTime = millis();
 
 //claw
 const int homeAngle = 50;
-const int lettuceAngle = 128;
-const int tomatoAngle = 124;
+const int lettuceAngle = 98;
+const int tomatoAngle = 96;
 const int cheeseAngle = 100;
-const int pattyAngle = 124;
-const int bunAngle = 123;
+const int pattyAngle = 95;
+const int topBunAngle = 95;
+const int botBunAngle = 93;
 const int plateAngle = 77;
+const int fullRetract = 27;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
