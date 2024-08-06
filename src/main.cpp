@@ -58,7 +58,7 @@ const int pattyAngle = 96;
 const int topBunAngle = 98;
 const int bottomBunAngle = 95;
 const int plateAngle = 75;
-const int offsetAngle = -10;
+const int offsetAngle = -15;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
