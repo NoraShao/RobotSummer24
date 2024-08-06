@@ -41,11 +41,11 @@ const int PWMFreq = 100;
 
 //speed control
 const double set_speed = 1200;
-const double turn_speed = 1000;
+const double turn_speed = 1200;
 
 //locating serving area
 const int serve_area_far = 4000;
-const int serve_area_close = 0;
+const int serve_area_close = 2000;
 
 //turning
 unsigned long prevTime = millis();
@@ -214,7 +214,7 @@ void setup() {
   pinMode(IR_farLeft, INPUT_PULLUP);
   pinMode(microswitch, INPUT_PULLDOWN);
   pinMode(limitSwitch, INPUT_PULLDOWN);
-  pinMode(clawMovePin, INPUT);
+  pinMode(clawMovePin, INPUT_PULLDOWN);
   pinMode(rotaryPin1, INPUT_PULLUP);
   pinMode(rotaryPin2, INPUT_PULLUP);
   pinMode(rotaryPin3, INPUT_PULLUP);
@@ -254,8 +254,6 @@ void setup() {
 
 void loop() {
   startUp();
-  //ledcWrite(clawCH1, updownSpeed);
-  //ledcWrite(clawCH2, 0);
   cheesePlate();
   shutDown();
 }
@@ -309,23 +307,23 @@ void turn(char direction){
   LED7Flag = true;
   if(direction == 'r'){
     setSpeed('b','f', set_speed, set_speed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_right) && getError() != -0.01){
       setSpeed('b','f', turn_speed, turn_speed);
     }
     stop();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_right) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
   } else if(direction == 'l'){
     setSpeed('f','b', set_speed, set_speed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_left) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     }
     stop();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_left) && getError() != -0.01){
         setSpeed('b','f', turn_speed, turn_speed);
       }
@@ -338,23 +336,23 @@ void lastTurn(char direction){
   LED7Flag = true;
   if(direction == 'r'){
     setSpeed('b','f', set_speed, set_speed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_sideLeft) && getError() != -0.01){
       setSpeed('b','f', turn_speed, turn_speed);
     }
     stop();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_sideLeft) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
   } else if(direction == 'l'){
     setSpeed('f','b', set_speed, set_speed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_sideRight) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     }
     stop();
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_sideRight) && getError() != -0.01){
         setSpeed('b','f', turn_speed, turn_speed);
       }
@@ -453,7 +451,7 @@ void backUp(){
     setSpeed('b','b',set_speed,set_speed);
   }
   setSpeed('f','f',set_speed,set_speed);
-  vTaskDelay(100 / portTICK_PERIOD_MS);
+  vTaskDelay(200 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
