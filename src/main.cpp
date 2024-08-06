@@ -40,7 +40,7 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 3200;
+const double set_speed = 3000;
 const double turn_speed = 1500;
 
 //locating serving area
@@ -260,6 +260,7 @@ void setup() {
 //loop
 
 void loop() {
+  pinionServo.writeMicroseconds(stopPW);
   startUp();
   //ledcWrite(clawCH1, updownSpeed);
   //ledcWrite(clawCH2, 0);
@@ -267,7 +268,7 @@ void loop() {
   // shutDown();
   // linefollow('f');
   goTo(1, 3);
-  turn('l');
+  turn('r');
   shutDown();
 
   // // clawUp();
@@ -330,7 +331,7 @@ void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right
 void turn(char direction){
   LED7Flag = true;
   if(direction == 'r'){
-    setSpeed('b','f', set_speed, set_speed);
+    setSpeed('b','f', set_speed * 0.8, set_speed * 0.8);
     vTaskDelay(200 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_right) && getError() != -0.01){
       setSpeed('b','f', turn_speed, turn_speed);
@@ -341,7 +342,7 @@ void turn(char direction){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
   } else if(direction == 'l'){
-    setSpeed('f','b', set_speed, set_speed);
+    setSpeed('f','b', set_speed * 0.8, set_speed * 0.8);
     vTaskDelay(200 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_left) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
@@ -349,11 +350,11 @@ void turn(char direction){
     stop();
     vTaskDelay(200 / portTICK_PERIOD_MS);
     while(!digitalRead(IR_left) && getError() != -0.01){
-        setSpeed('b','f', turn_speed, turn_speed);
-      }
+      setSpeed('b','f', turn_speed, turn_speed);
     }
-    stop();
-    LED7Flag = false;
+  }
+  stop();
+  LED7Flag = false;
 }
 
 void lastTurn(char direction){
@@ -394,15 +395,15 @@ while(lineFollowFlag){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
+    case 0: setSpeed('b','b', set_speed * 0.75, set_speed * 0.75); break;
     case 8: setSpeed('f','f', set_speed, 0.75); break;
-    case 12: setSpeed('f','f', set_speed, set_speed * 0.85); break;
-    case 14: setSpeed('f','f', set_speed, set_speed * 0.9); break;
-    case 4: setSpeed('f','f', set_speed, set_speed * 0.95); break;
+    case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
+    case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
+    case 4: setSpeed('f','f', set_speed, set_speed * 0.9); break;
     case 6: setSpeed('f','f', set_speed, set_speed); break;
-    case 2: setSpeed('f','f', set_speed * 0.95, set_speed); break;
-    case 7: setSpeed('f','f', set_speed * 0.9, set_speed); break;
-    case 3: setSpeed('f','f', set_speed * 0.85, set_speed); break;
+    case 2: setSpeed('f','f', set_speed * 0.9, set_speed); break;
+    case 7: setSpeed('f','f', set_speed * 0.85, set_speed); break;
+    case 3: setSpeed('f','f', set_speed * 0.8, set_speed); break;
     case 1: setSpeed('f','f', 0.75, set_speed); break;
     case 15: setSpeed('b','b', set_speed, set_speed); vTaskDelay(300 / portTICK_PERIOD_MS);
     lineFollowFlag = false; setSpeed('b','b', 0, 0);break;
