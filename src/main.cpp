@@ -134,7 +134,7 @@ double getError();
 void grab(String food);
 //grabs food or plate
 
-void release(String food);
+void release();
 //releases food or plate from claw`
 
 void stack(String food);
@@ -265,13 +265,13 @@ void loop() {
   // clawUp();
   grab("plate");
   movePlatform("plate");
-  stack("plate");
+  release();
   homePlatform();
   delay(2000);  //stack other food on platform & move to serve area here
   movePlatform("plate");
   grab("plate");
   homePlatform();
-  stack("plate");
+  release();
 }
 
 //function definitions
@@ -490,12 +490,17 @@ void grab(String food){
   LED7Flag = false;
 }
 
-void release(String food){
+void release(){
   for(int i = currentAngle; i >= homeAngle; i--){
     clawServo.write(i);
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   currentAngle = homeAngle;
+  // raise claw
+  ledcWrite(clawCH1, updownSpeed);
+  ledcWrite(clawCH2, 0);
+  vTaskDelay(upTime / portTICK_PERIOD_MS);
+  ledcWrite(clawCH1, 0);
 }
 
 void stack(String food){
