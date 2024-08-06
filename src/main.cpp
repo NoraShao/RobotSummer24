@@ -26,8 +26,8 @@
 #define clawMovePin 2
 #define servo1IN 27
 #define servo2IN 33
-#define clawIN1 14
-#define clawIN2 12
+#define clawIN1 12
+#define clawIN2 14
 
 //PWM setup
 const int CH1 = 4;
@@ -51,19 +51,19 @@ const int serve_area_close = 0;
 unsigned long prevTime = millis();
 
 //claw
-const int offsetAngle = -15;
-const int homeAngle = 52 + offsetAngle;
+const int offsetAngle = -5;
+const int homeAngle = 47;
 const int lettuceAngle = 101 + offsetAngle;
-const int tomatoAngle = 97 + offsetAngle;
+const int tomatoAngle = 92;
 const int cheeseAngle = 97 + offsetAngle; // flat sides (not diagonally on corners)
 const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
-const int plateAngle = 75 + offsetAngle;
+const int plateAngle = 70;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 2750;
+const unsigned long upTime = 2500; // 2750
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -203,13 +203,13 @@ void setup() {
   
   Serial.begin(115200);
 
-  attachInterrupt(digitalPinToInterrupt(IR_sideLeft), IRCount, HIGH);
-  attachInterrupt(digitalPinToInterrupt(IR_sideRight), IRCount, HIGH);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCountLeft, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCountLeft, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin3), clickCountRight, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin4), clickCountRight, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(clawMovePin), clawUp, HIGH);
+  // attachInterrupt(digitalPinToInterrupt(IR_sideLeft), IRCount, HIGH);
+  // attachInterrupt(digitalPinToInterrupt(IR_sideRight), IRCount, HIGH);
+  // attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCountLeft, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCountLeft, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rotaryPin3), clickCountRight, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rotaryPin4), clickCountRight, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(clawMovePin), clawUp, HIGH);
   
   //input
   pinMode(IR_sideRight, INPUT_PULLUP);
@@ -260,27 +260,42 @@ void setup() {
 //loop
 
 void loop() {
-  pinionServo.writeMicroseconds(stopPW);
-  startUp();
+  //pinionServo.writeMicroseconds(stopPW);
+  //startUp();
   //ledcWrite(clawCH1, updownSpeed);
   //ledcWrite(clawCH2, 0);
   // cheesePlate();
   // shutDown();
   // linefollow('f');
-  goTo(1, 3);
-  turn('r');
-  shutDown();
+  // goTo(1, 3);
+  // turn('r');
+  // shutDown();
 
-  // // clawUp();
-  // grab("plate");
-  // movePlatform("plate");
-  // release();
+  // clawUp();
+  // ledcWrite(clawCH1, updownSpeed);
+  // ledcWrite(clawCH2, 0);
+
+  homePlatform();
+  grab("plate");
+  movePlatform("plate");
+  release();
+  homePlatform();
+  delay(1000);  //stack other food on platform & move to serve area here
+  grab("tomato");
+  movePlatform("tomato");
+  release();
+  homePlatform();
+  delay(1000); //move to serving area
+  movePlatform("plate");
+  grab("plate");
+  homePlatform();
+  release();
+  delay(1500);  
+
   // homePlatform();
-  // delay(2000);  //stack other food on platform & move to serve area here
+  // delay(1000);
   // movePlatform("plate");
-  // grab("plate");
-  // homePlatform();
-  // release();
+  // delay(1000);
 }
 
 //function definitions
@@ -388,31 +403,31 @@ void lastTurn(char direction){
 
 
 void linefollow(char motorDirection){
-while(lineFollowFlag){
-  int farLeftIR_reading = digitalRead(IR_farLeft);
-  int leftIR_reading = digitalRead(IR_left);
-  int rightIR_reading = digitalRead(IR_right);
-  int farRightIR_reading = digitalRead(IR_farRight);
-  int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
-  switch(bitSum){
-    case 0: setSpeed('b','b', set_speed * 0.75, set_speed * 0.75); break;
-    case 8: setSpeed('f','f', set_speed, 0.75); break;
-    case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
-    case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
-    case 4: setSpeed('f','f', set_speed, set_speed * 0.9); break;
-    case 6: setSpeed('f','f', set_speed, set_speed); break;
-    case 2: setSpeed('f','f', set_speed * 0.9, set_speed); break;
-    case 7: setSpeed('f','f', set_speed * 0.85, set_speed); break;
-    case 3: setSpeed('f','f', set_speed * 0.8, set_speed); break;
-    case 1: setSpeed('f','f', 0.75, set_speed); break;
-    case 15: setSpeed('b','b', set_speed, set_speed); vTaskDelay(300 / portTICK_PERIOD_MS);
-    lineFollowFlag = false; setSpeed('b','b', 0, 0);break;
-    default: {
-      setSpeed('f','f', set_speed, set_speed);
+  while(lineFollowFlag){
+    int farLeftIR_reading = digitalRead(IR_farLeft);
+    int leftIR_reading = digitalRead(IR_left);
+    int rightIR_reading = digitalRead(IR_right);
+    int farRightIR_reading = digitalRead(IR_farRight);
+    int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
+    switch(bitSum){
+      case 0: setSpeed('b','b', set_speed * 0.75, set_speed * 0.75); break;
+      case 8: setSpeed('f','f', set_speed, 0.75); break;
+      case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
+      case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
+      case 4: setSpeed('f','f', set_speed, set_speed * 0.9); break;
+      case 6: setSpeed('f','f', set_speed, set_speed); break;
+      case 2: setSpeed('f','f', set_speed * 0.9, set_speed); break;
+      case 7: setSpeed('f','f', set_speed * 0.85, set_speed); break;
+      case 3: setSpeed('f','f', set_speed * 0.8, set_speed); break;
+      case 1: setSpeed('f','f', 0.75, set_speed); break;
+      case 15: setSpeed('b','b', set_speed, set_speed); vTaskDelay(300 / portTICK_PERIOD_MS);
+      lineFollowFlag = false; setSpeed('b','b', 0, 0);break;
+      default: {
+        setSpeed('f','f', set_speed, set_speed);
+      }
     }
   }
- }
- lineFollowFlag = true;
+  lineFollowFlag = true;
 }
 
 void linefollowTimer(char motorDirection, unsigned long time){
@@ -660,7 +675,7 @@ void homePlatform() {
   pinionServo.writeMicroseconds(stopPW);
   vTaskDelay(100/portTICK_PERIOD_MS);
   pinionServo.writeMicroseconds(CCWPW); // move platform out to account for startup jump
-  vTaskDelay(100/portTICK_PERIOD_MS);
+  vTaskDelay(50/portTICK_PERIOD_MS);
   pinionServo.writeMicroseconds(stopPW); // for testing only
   vTaskDelay(3000/portTICK_PERIOD_MS);
 }
@@ -762,6 +777,7 @@ void toggleLED(void *params){
       changeMUX(1, 1, 1);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
+    vTaskDelay(1);
   }
 }
 
