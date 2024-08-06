@@ -26,23 +26,26 @@ void setup() {
   pinMode(MUX2, OUTPUT);
   pinMode(MUX3, OUTPUT);
 
-  LED1Flag = true;
-  LED2Flag = true;
-  LED3Flag = true;
-  LED4Flag = true;
-  LED5Flag = true;
-  LED6Flag = true;
-  LED7Flag = true;
-  LED8Flag = true;
-
-  xTaskCreate(toggleLED, "toggleLED", 4096, NULL, 1, &LEDtaskHandle);
+  xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDtaskHandle);
 }
 
 void loop() {
-  
-}
+  LED1Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED2Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED3Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED4Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED5Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED6Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED7Flag = true;
+  vTaskDelay(1000/portTICK_PERIOD_MS);
+  LED8Flag = true;
 
-void LEDSwitch(){
 }
 
 void toggleLED(void *params){
@@ -52,11 +55,11 @@ void toggleLED(void *params){
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED2Flag) {
-        changeMUX(0, 0, 1);
+        changeMUX(0, 1, 0);
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED3Flag) {
-        changeMUX(0, 1, 0);
+        changeMUX(0, 0, 1);
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED4Flag) {
@@ -64,11 +67,11 @@ void toggleLED(void *params){
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED5Flag) {
-        changeMUX(1, 0, 0);
+        changeMUX(1, 0, 1);
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED6Flag) {
-        changeMUX(1, 0, 1);
+        changeMUX(1, 0, 0);
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
       if (LED7Flag) {
