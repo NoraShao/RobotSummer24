@@ -41,7 +41,7 @@ const int PWMFreq = 100;
 
 //speed control
 const double set_speed = 1200;
-const double turn_speed = 1200;
+const double turn_speed = 1000;
 
 //locating serving area
 const int serve_area_far = 4000;
@@ -52,14 +52,14 @@ unsigned long prevTime = millis();
 
 //claw
 const int homeAngle = 50;
-const int lettuceAngle = 98;
-const int tomatoAngle = 96;
+const int lettuceAngle = 100;
+const int tomatoAngle = 98;
 const int cheeseAngle = 100;
-const int pattyAngle = 95;
-const int topBunAngle = 95;
-const int botBunAngle = 93;
-const int plateAngle = 77;
-const int fullRetract = 27;
+const int pattyAngle = 97;
+const int topBunAngle = 97;
+const int botBunAngle = 95;
+const int plateAngle = 79;
+const int fullRetract = 25;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
@@ -121,7 +121,7 @@ void linefollow(char motor_direction);
 
 void linefollowTimer(char motorDirection, unsigned long time);
 
-void goTo(int initialPosition, int finalPosition);
+void goTo(int positionChange);
 //goes from one line to another
 
 void upTo(int upTo_delay);
@@ -184,6 +184,12 @@ void goToServe(int initialPostion);
 void goToFirstCounter(int finalPosition, char side, int upToClicks);
 //goes to counter from startinf position
 
+void getPatty();
+
+void getBottomBun();
+
+void getTopBun();
+
 void cheesePlate();
 //makes cheese plate
 
@@ -237,7 +243,7 @@ void setup() {
   ledcAttachPin(clawIN1, clawCH1);
   ledcAttachPin(clawIN2, clawCH2);
   clawServo.attach(servo1IN);
-  clawServo.write(homeAngle);
+  clawServo.write(fullRetract);
   pinionServo.attach(servo2IN);
 
   //freeRTOS
@@ -254,7 +260,9 @@ void setup() {
 
 void loop() {
   startUp();
-  cheesePlate();
+  getBottomBun();
+  getPatty();
+  getTopBun();
   shutDown();
 }
 
@@ -308,23 +316,23 @@ void turn(char direction){
   if(direction == 'r'){
     setSpeed('b','f', set_speed, set_speed);
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_right) && getError() != -0.01){
+    while(getError() != 0){
       setSpeed('b','f', turn_speed, turn_speed);
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_right) && getError() != -0.01){
+    while(getError() != 0){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
   } else if(direction == 'l'){
     setSpeed('f','b', set_speed, set_speed);
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_left) && getError() != -0.01){
+    while(getError() != 0){
       setSpeed('f','b', turn_speed, turn_speed);
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_left) && getError() != -0.01){
+    while(getError() != 0){
         setSpeed('b','f', turn_speed, turn_speed);
       }
     }
@@ -371,15 +379,15 @@ while(lineFollowFlag){
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
     case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
-    case 8: setSpeed('f','f', set_speed, 0.65); break;
-    case 12: setSpeed('f','f', set_speed, set_speed * 0.75); break;
-    case 14: setSpeed('f','f', set_speed, set_speed * 0.8); break;
+    case 8: setSpeed('f','f', set_speed, 0.75); break;
+    case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
+    case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
     case 4: setSpeed('f','f', set_speed, set_speed * 0.9); break;
     case 6: setSpeed('f','f', set_speed, set_speed); break;
     case 2: setSpeed('f','f', set_speed * 0.9, set_speed); break;
-    case 7: setSpeed('f','f', set_speed * 0.8, set_speed); break;
-    case 3: setSpeed('f','f', set_speed * 0.75, set_speed); break;
-    case 1: setSpeed('f','f', 0.65, set_speed); break;
+    case 7: setSpeed('f','f', set_speed * 0.85, set_speed); break;
+    case 3: setSpeed('f','f', set_speed * 0.8, set_speed); break;
+    case 1: setSpeed('f','f', 0.75, set_speed); break;
     case 15: setSpeed('b','b', set_speed, set_speed); vTaskDelay(300 / portTICK_PERIOD_MS);
     lineFollowFlag = false; setSpeed('b','b', 0, 0);break;
     default: {
@@ -400,7 +408,7 @@ while(time > currentTime - initialTimer){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('f','f', set_speedT, set_speedT); break;
+    case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
     case 8: setSpeed('f','f', set_speedT, 0.65); break;
     case 12: setSpeed('f','f', set_speedT, set_speedT * 0.75); break;
     case 14: setSpeed('f','f', set_speedT, set_speedT * 0.8); break;
@@ -417,15 +425,15 @@ while(time > currentTime - initialTimer){
   }
   currentTime = millis();
  }
+ stop();
 }
 
-void goTo(int initialPosition, int finalPosition){
+void goTo(int positionChange){
   LED7Flag = true;
   IRCounter = 0;
-  position_difference = abs(finalPosition - initialPosition);
-  char motorDirection = initialPosition < finalPosition ? 'f' : 'b';
+  position_difference = positionChange;
 
-  linefollow(motorDirection);
+  linefollow('f');
 
   lineFollowFlag = true;
   setSpeed('b','b',set_speed,set_speed);
@@ -504,9 +512,11 @@ void grab(String food){
     finalAngle = tomatoAngle;
   } else if (food == "patty"){
     finalAngle = pattyAngle;
-  } else if (food == "bun"){
-    finalAngle = bunAngle;
-  } else if (food == "cheese"){
+  } else if (food == "topbun"){
+    finalAngle = topBunAngle;
+  } else if (food == "bottombun"){
+    finalAngle = botBunAngle;
+  }else if (food == "cheese"){
     finalAngle = cheeseAngle; 
   } else if (food == "plate"){
     finalAngle = plateAngle;
@@ -519,7 +529,7 @@ void grab(String food){
   while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
   for(int i = currentAngle; i <= finalAngle; i++){
@@ -574,7 +584,7 @@ void cook(){
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
-  vTaskDelay(10000 / portTICK_PERIOD_MS);
+  vTaskDelay(11000 / portTICK_PERIOD_MS);
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
   vTaskDelay(upTime / portTICK_PERIOD_MS);
@@ -667,7 +677,7 @@ void clickCountRight(){
 }
 
 void IRCount(){
-  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 1000){
+  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 500){
     IRCounter++;
     prevTime = millis();
     if(IRCounter == position_difference){
@@ -712,43 +722,6 @@ void toggleLED(void *params){
         vTaskDelay(1 / portTICK_PERIOD_MS);
       }
    }
-  /*
-  //robot1
-  while(1) { 
-    if (digitalRead(IR_farRight)) {
-      changeMUX(0, 1, 0);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-    if (digitalRead(IR_right)) {
-      changeMUX(1, 0, 0);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-    if (digitalRead(IR_left)) {
-      changeMUX(0, 0, 0);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-    if (digitalRead(IR_farLeft)) {
-      changeMUX(1, 1, 0);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-      }
-    if (digitalRead(IR_sideLeft)) {
-      changeMUX(0, 0, 1);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-      }
-    if (digitalRead(IR_sideRight)) {
-      changeMUX(1, 0, 1);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-    if (LED7Flag) {
-      changeMUX(0, 1, 1);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-    if (LED8Flag) {
-      changeMUX(1, 1, 1);
-      vTaskDelay(1/portTICK_PERIOD_MS);
-    }
-  }
-  */
 }
 
 void changeMUX(bool S0, bool S1, bool S2){
@@ -757,63 +730,74 @@ void changeMUX(bool S0, bool S1, bool S2){
   digitalWrite(MUX3, S2);
 }
 
-void moveToNextCounter(int initialPosition, int finalPosition, char firstTurn, char secondTurn, int upToClicks){
+void getPatty(){
   backUp();
-  turn(firstTurn);
-  goTo(initialPosition, finalPosition);
-  turn(secondTurn);
-  upTo(upToClicks);
-}
-
-void grabAndStack(String food, char platformIncluded){
-  grab(food);
-  if(platformIncluded == 'y'){
-  stackOnPlatform(food);
-  } else if (platformIncluded == 'n'){
-    stack(food);
-  }
-}
-
-void goToServe(int initialPostion){
-  LED7Flag = true;
-  backUp();
-  if(initialPostion == 1){
-    turn('l');
-    locateServeArea(1);
-    turn('r');
-    setSpeed('f','f',2300,2300);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  } else if (initialPostion == 6){
-    turn('r');
-    locateServeArea(6);
-    turn('l');
-    setSpeed('f','f',2300,2300);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  } else if (initialPostion == 4){
-    turn('l');
-    locateServeArea(4);
-    turn('l');
-    setSpeed('f','f',2300,2300);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
+  turn('r');
+  goTo(1);
+  turn('r');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
   stop();
-  LED7Flag = false;
+  grab("patty");
+  backUp();
+  turn('r');
+  goTo(1);
+  turn('r');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  stop();
+  stack("patty");
 }
 
-void goToFirstCounter(int finalPosition, char side, int upToClicks){
-  goTo(0,finalPosition);
-  turn(side);
-  upTo(upToClicks);
+void getBottomBun(){
+  goTo(4);
+  turn('l');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  stop();
+  grab("bottombun");
+  backUp();
+  turn('l');
+  goTo(1);
+  turn('l');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  stack("plate");
 }
+
+void getTopBun(){
+  backUp();
+  turn('l');
+  goTo(1);
+  turn('l');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  stop();
+  grab("topbun");
+  backUp();
+  turn('l');
+  goTo(1);
+  turn('l');
+  linefollowTimer('f',2000);
+  setSpeed('f','f',1000,1000);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  stack("plate");
+}
+
 
 void cheesePlate(){
-  goTo(0,1);
+  goTo(1);
   turn('r');
   linefollowTimer('f', 800);
   grab("cheese"); 
   backUp();
   turn('l');
-  goTo(1,6);
+  goTo(5);
   turn('l');
   linefollowTimer('f', 2000);
   stack("cheese");
@@ -828,13 +812,13 @@ void cheesePlate(){
 }
 
 void salad(){
-  goTo(0,2);
+  goTo(2);
   turn('l');
   upTo(24);
   grab("tomato");
   backUp();
   turn('r');
-  goTo(2,6);
+  goTo(4);
   turn('l');
   upTo(24);
   stack("tomato");
