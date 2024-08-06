@@ -40,7 +40,7 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 3000;
+const double set_speed = 1500;
 
 //locating serving area
 const int serve_area_far = 0;
@@ -60,7 +60,7 @@ const int plateAngle = 106;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 2000;
+const unsigned long upTime = 1500;
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -87,10 +87,10 @@ volatile bool LED8Flag = false;
 
 //task handling
 TaskHandle_t LEDHandle;
-TaskHandle_t goToFirstHandle;
-TaskHandle_t goToCounterHandle;
-TaskHandle_t grabAndStackHandle;
-TaskHandle_t serveHandle;
+// TaskHandle_t goToFirstHandle;
+// TaskHandle_t goToCounterHandle;
+// TaskHandle_t grabAndStackHandle;
+// TaskHandle_t serveHandle;
 
 //functions
 
@@ -245,17 +245,26 @@ void setup() {
 
 void loop() {
   startUp();
-  linefollow('f');
-  //turn('l');
-  //goTo(2,5)
+  //goTo(1,3);
+  //stop();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  turn('r');
+  //setSpeed('f','f', set_speed * 0.5, set_speed * 0.5);
+  //vTaskDelay(500 / portTICK_PERIOD_MS);
+  //grab("cheese");
+  //shutDown();
 }
 
 //function definitions
 
 void startUp(){
-  LED7Flag = true;
+  LED8Flag = true;
   vTaskDelay(1000/ portTICK_PERIOD_MS);
-  LED7Flag = false;
+  LED8Flag = false;
+  vTaskDelay(1000/ portTICK_PERIOD_MS);
+  LED8Flag = true;
+  vTaskDelay(1000/ portTICK_PERIOD_MS);
+  LED8Flag = false;
   vTaskDelay(1000/ portTICK_PERIOD_MS);
   LED7Flag = true;
   vTaskDelay(1000/ portTICK_PERIOD_MS);
@@ -295,7 +304,7 @@ void turn(char direction){
   LED7Flag = true;
   if(direction == 'r'){
     setSpeed('b','f', set_speed, set_speed);
-    vTaskDelay(250 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     while(digitalRead(IR_farRight) == LOW){
       setSpeed('b','f', set_speed, set_speed);
       }
@@ -303,12 +312,12 @@ void turn(char direction){
       setSpeed('f','b', set_speed, set_speed);
     } 
   } else if(direction == 'l'){
-      setSpeed('f','b', set_speed * 0.75, set_speed * 0.75);
-      vTaskDelay(250 / portTICK_PERIOD_MS);
+      setSpeed('f','b', set_speed, set_speed);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
       while(digitalRead(IR_farLeft) == LOW){
       setSpeed('f','b', set_speed, set_speed);
       while(digitalRead(IR_left) == LOW){
-        setSpeed('b','f', set_speed * 0.75, set_speed * 0.75);
+        setSpeed('b','f', set_speed , set_speed);
       }
     }
   }
@@ -317,25 +326,28 @@ void turn(char direction){
 }
 
 void linefollow(char motorDirection){
-  int prevError = 0;
- while(lineFollowFlag){
-  int error = getError();
-  if(error == -10){
-    while(abs(error) <= 2){
-      setSpeed('b','b', set_speed, set_speed);
-      LED8Flag = true;
-      error = getError();    
-      }
+while(lineFollowFlag){
+  int farLeftIR_reading = digitalRead(IR_farLeft);
+  int leftIR_reading = digitalRead(IR_left);
+  int rightIR_reading = digitalRead(IR_right);
+  int farRightIR_reading = digitalRead(IR_farRight);
+  int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
+  switch(bitSum){
+    case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
+    case 8: setSpeed('f','f', set_speed, 0.65); break;
+    case 12: setSpeed('f','f', set_speed, set_speed * 0.75); break;
+    case 14: setSpeed('f','f', set_speed, set_speed * 0.8); break;
+    case 4: setSpeed('f','f', set_speed, set_speed * 0.9); break;
+    case 6: setSpeed('f','f', set_speed, set_speed); break;
+    case 2: setSpeed('f','f', set_speed * 0.9, set_speed); break;
+    case 7: setSpeed('f','f', set_speed * 0.8, set_speed); break;
+    case 3: setSpeed('f','f', set_speed * 0.75, set_speed); break;
+    case 1: setSpeed('f','f', 0.65, set_speed); break;
+    case 15: setSpeed('f','f', set_speed, set_speed); break;
+    default: {
+      setSpeed('f','f', set_speed, set_speed);
+    }
   }
-  LED8Flag = false;
-  int P = 50;
-  int delta = P * error;
-  if(motorDirection == 'f'){
-    setSpeed('f','f', set_speed - delta, set_speed + delta);
-  } else if (motorDirection == 'b'){
-    setSpeed('b','b', set_speed + delta, set_speed - delta);
-  }
-  prevError = error;
  }
 }
 
@@ -348,8 +360,8 @@ void goTo(int initialPosition, int finalPosition){
   linefollow(motorDirection);
 
   lineFollowFlag = true;
-  setSpeed('b','b',1500,1500);
-  vTaskDelay(200 / portTICK_PERIOD_MS);
+  setSpeed('b','b',set_speed,set_speed);
+  vTaskDelay(250 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
@@ -415,7 +427,7 @@ double getError(){
     case 15: return 0; break;
     default: {
       LED7Flag = true;
-      vTaskDelay(250/portTICK_PERIOD_MS);
+      //vTaskDelay(250/portTICK_PERIOD_MS);
       return 0;
     }
   }
@@ -586,16 +598,53 @@ void clickCountRight(){
 }
 
 void IRCount(){
-  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 250){
+  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 1000){
     IRCounter++;
     prevTime = millis();
-    if(IRCounter + 1 == position_difference){
+    if(IRCounter == position_difference){
       lineFollowFlag = false;
     }
   }
 }
 
 void toggleLED(void *params){
+  //robot2
+  while(1) { 
+      if (digitalRead(IR_farRight)) {
+        changeMUX(0, 0, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (digitalRead(IR_right)) {
+        changeMUX(0, 1, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (digitalRead(IR_left)) {
+        changeMUX(0, 0, 1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (digitalRead(IR_farLeft)) {
+        changeMUX(0, 1, 1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (digitalRead(IR_sideLeft)) {
+        changeMUX(1, 0, 1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (digitalRead(IR_sideRight)) {
+        changeMUX(1, 0, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (LED7Flag) {
+        changeMUX(1, 1, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+      if (LED8Flag) {
+        changeMUX(1, 1, 1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+      }
+   }
+  /*
+  //robot1
   while(1) { 
     if (digitalRead(IR_farRight)) {
       changeMUX(0, 1, 0);
@@ -630,6 +679,7 @@ void toggleLED(void *params){
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
   }
+  */
 }
 
 void changeMUX(bool S0, bool S1, bool S2){
