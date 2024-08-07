@@ -17,10 +17,6 @@
 #define MUX1 25
 #define MUX2 26
 #define MUX3 32
-#define rotaryPin1 38
-#define rotaryPin2 37
-#define rotaryPin3 35
-#define rotaryPin4 34
 #define microswitch 9
 #define limitSwitch 4
 #define clawMovePin 2
@@ -45,14 +41,14 @@ const double turn_speed = 1500;
 const double to_counter_time = 2000; // robot2 time
 
 //locating serving area
-const int serve_area_far = 4000;
-const int serve_area_close = 2000;
+const int serve_area_far = 3850; //4000
+const int serve_area_close = 1200; //2000
 
 //turning
 unsigned long prevTime = millis();
 
 //claw
-const int offsetAngle = -5;
+const int offsetAngle = 0;
 int homeAngle = 70; // 47
 const int lettuceAngle = 101 + offsetAngle;
 const int tomatoAngle = 96;  // 92;
@@ -75,14 +71,6 @@ const int foodDelay = 700; // 750?
 Servo clawServo;
 Servo pinionServo;
 
-//rotary
-int upToClicksG;
-volatile int clickL;
-volatile int clickR;
-volatile int clickCounterL;
-volatile int clickCounterR;
-volatile int prev_clickL;
-volatile int prev_clickR;
 volatile int IRCounter = 0;
 volatile int position_difference = 100;
 volatile bool lineFollowFlag = true;
@@ -93,10 +81,6 @@ volatile bool LED8Flag = false;
 
 //task handling
 TaskHandle_t LEDHandle;
-// TaskHandle_t goToFirstHandle;
-// TaskHandle_t goToCounterHandle;
-// TaskHandle_t grabAndStackHandle;
-// TaskHandle_t serveHandle;
 
 //functions
 
@@ -125,9 +109,6 @@ void linefollowTimer(char motorDirection, unsigned long time);
 
 void goTo(int positionChange);
 //goes from one line to another
-
-void upTo(int upTo_delay);
-//moves up to counter
 
 void backUp();
 //goes back to main black line
@@ -161,15 +142,6 @@ void homePlatform();
 
 void clawUp();
 //manually moves claw up
-
-void resetRotaryCount();
-//resets rotary count
-
-void clickCountLeft();
-//counts rotary clicks on the left wheel
-
-void clickCountRight();
-//counts rotary clicks on the right wheel
 
 void IRCount();
 //counts number of activations from wing IR sensors
@@ -247,7 +219,6 @@ void cheesePlate();
 //makes cheese plate
 
 void salad();
-//makes salad
 
 void deluxeCheeseBurger();
 //makes deluxeCheeseBurger
@@ -260,10 +231,6 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(IR_sideLeft), IRCount, HIGH);
   attachInterrupt(digitalPinToInterrupt(IR_sideRight), IRCount, HIGH);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin1), clickCountLeft, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin2), clickCountLeft, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin3), clickCountRight, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rotaryPin4), clickCountRight, CHANGE);
   attachInterrupt(digitalPinToInterrupt(clawMovePin), clawUp, HIGH);
   
   //input
@@ -274,12 +241,7 @@ void setup() {
   pinMode(IR_left, INPUT_PULLUP);
   pinMode(IR_farLeft, INPUT_PULLUP);
   pinMode(microswitch, INPUT_PULLDOWN);
-  pinMode(limitSwitch, INPUT_PULLDOWN);
   pinMode(clawMovePin, INPUT_PULLDOWN);
-  pinMode(rotaryPin1, INPUT_PULLUP);
-  pinMode(rotaryPin2, INPUT_PULLUP);
-  pinMode(rotaryPin3, INPUT_PULLUP);
-  pinMode(rotaryPin4, INPUT_PULLUP);
 
   //output
   pinMode(MUX1, OUTPUT);
@@ -305,49 +267,13 @@ void setup() {
 
   //freeRTOS
   xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDHandle);
-  // xTaskCreate(goToFirstCounter, "goToFirst", 2048, NULL, 1, &goToFirstHandle);
-  // xTaskCreate(goToServe, "serve", 2048, NULL, 1, &serveHandle);
-  // xTaskCreate(moveToNextCounter, "goToCounter", 2048, NULL, 1, &goToCounterHandle);
-  // xTaskCreate(grabAndStack, "grabAndStack", 2048, NULL, 1, &grabAndStackHandle);
-  
 }
 
 
 //loop
 
 void loop() {
-  startUp();
   setSpeed('f', 'f', set_speed, set_speed);
-  // cheesePlate();
-  //backUp();
-  // goTo(3);
-  // turn('l');
-  // linefollowTimer('f', 2000);
-  // grab("cheese");
-  // setSpeed('f', 'f', set_speed, set_speed);
-
-  // grab("tomato");
-
-  // startToTomato();
-  // tomatoToCheese();
-  // cheeseToPlate();
-
-  // goTo(1);
-  // turn('l');
-  // linefollowTimer('f', 800);
-  // grab("tomato");
-  // backUp();
-  // turn('r');
-  // turn('r');
-  // linefollowTimer('f', 900);
-  // grab("cheese");
-  // backUp();
-  // turn('l');
-
-  // shutDown();
-
-  // ledcWrite(clawCH1, updownSpeed);
-  // ledcWrite(clawCH2, 0);
 }
 
 //function definitions
@@ -362,8 +288,6 @@ void startUp(){
   LED8Flag = false;
   vTaskDelay(1000/ portTICK_PERIOD_MS);
   LED7Flag = true;
-  vTaskDelay(1000/ portTICK_PERIOD_MS);
-  LED7Flag = false;
 }
 
 void shutDown(){
@@ -434,6 +358,9 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
+    while(!digitalRead(IR_sideRight) && getError() != -0.01){
+      setSpeed('b','f', turn_speed, turn_speed);
+    } 
     while(!digitalRead(IR_sideLeft) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
@@ -462,7 +389,7 @@ while(lineFollowFlag){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('b','b', set_speed * 0.75, set_speed * 0.75); break;
+    case 0: setSpeed('b','b', set_speed, set_speed); break;
     case 8: setSpeed('f','f', set_speed, 0.75); break;
     case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
     case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
@@ -483,7 +410,13 @@ while(lineFollowFlag){
 }
 
 void linefollowTimer(char motorDirection, unsigned long time){
-int set_speedT = set_speed;
+char altMotorDirection;
+if(motorDirection == 'f'){
+  altMotorDirection = 'b';
+} else if(motorDirection == 'b'){
+  altMotorDirection = 'f';
+}
+int set_speedT = 2000;
 unsigned long initialTimer = millis(), currentTime = millis();
 while(time > currentTime - initialTimer){
   int farLeftIR_reading = digitalRead(IR_farLeft);
@@ -492,17 +425,17 @@ while(time > currentTime - initialTimer){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    // case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
-    case 8: setSpeed('f','f', set_speedT, 0.65); break;
-    case 12: setSpeed('f','f', set_speedT, set_speedT * 0.75); break;
-    case 14: setSpeed('f','f', set_speedT, set_speedT * 0.8); break;
-    case 4: setSpeed('f','f', set_speedT, set_speedT * 0.9); break;
-    case 6: setSpeed('f','f', set_speedT, set_speedT); break;
-    case 2: setSpeed('f','f', set_speedT * 0.9, set_speedT); break;
-    case 7: setSpeed('f','f', set_speedT * 0.8, set_speedT); break;
-    case 3: setSpeed('f','f', set_speedT * 0.75, set_speedT); break;
-    case 1: setSpeed('f','f', 0.65, set_speedT); break;
-    case 15: setSpeed('f','f', 0, 0); break;
+    case 0: setSpeed(altMotorDirection,altMotorDirection, set_speed * 0.85, set_speed * 0.85); break;
+    case 8: setSpeed(motorDirection, motorDirection, set_speedT, 0.75); break;
+    case 12: setSpeed(motorDirection,motorDirection, set_speedT, set_speedT * 0.8); break;
+    case 14: setSpeed(motorDirection,motorDirection, set_speedT, set_speedT * 0.85); break;
+    case 4: setSpeed(motorDirection,motorDirection, set_speedT, set_speedT * 0.9); break;
+    case 6: setSpeed(motorDirection,motorDirection, set_speedT, set_speedT); break;
+    case 2: setSpeed(motorDirection,motorDirection, set_speedT * 0.9, set_speedT); break;
+    case 7: setSpeed(motorDirection,motorDirection, set_speedT * 0.85, set_speedT); break;
+    case 3: setSpeed(motorDirection,motorDirection, set_speedT * 0.8, set_speedT); break;
+    case 1: setSpeed(motorDirection,motorDirection, 0.75, set_speedT); break;
+    case 15: setSpeed(motorDirection,motorDirection, 0, 0); break;
     default: {
       setSpeed('f','f', set_speedT, set_speedT);
     }
@@ -516,9 +449,7 @@ void goTo(int positionChange){
   LED7Flag = true;
   IRCounter = 0;
   position_difference = positionChange;
-
   linefollow('f');
-
   lineFollowFlag = true;
   //setSpeed('b','b',set_speed,set_speed);
   //vTaskDelay(175 / portTICK_PERIOD_MS);
@@ -526,24 +457,21 @@ void goTo(int positionChange){
   LED7Flag = false;
 }
 
-void upTo(int upToClicks){
-  upToClicksG = upToClicks;
-  LED7Flag = true;
-  resetRotaryCount();
-  linefollow('f');
-  lineFollowFlag = true;
-  stop();
-  LED7Flag = false;
-}
-
 void backUp(){
   LED7Flag = true;
-  linefollowTimer('f',250);
-  while(!digitalRead(IR_sideLeft)){
-    setSpeed('b','b',set_speed,set_speed);
+  bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
+  while(!exit){
+    setSpeed('b','b',set_speed * 1.2, set_speed * 1.2);
+    if(digitalRead(IR_sideLeft)){
+      IR_sideLeftFlag = true;
+    }
+    if(digitalRead(IR_sideRight)){
+      IR_sideRightFlag = true;
+    }
+    if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
+      exit = true;
+    }
   }
-  setSpeed('f','f',set_speed,set_speed);
-  vTaskDelay(200 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
@@ -581,7 +509,6 @@ double getError(){
     case 15: return -0.01; break;
     default: {
       LED7Flag = true;
-      //vTaskDelay(250/portTICK_PERIOD_MS);
       return 0;
     }
   }
@@ -616,7 +543,7 @@ void grab(String food){
   while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
   // close claw to clamp food
@@ -642,7 +569,7 @@ void release(){
   // raise claw
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
-  vTaskDelay(upTime / portTICK_PERIOD_MS);
+  vTaskDelay((upTime - 2000) / portTICK_PERIOD_MS);
   ledcWrite(clawCH1, 0);
 }
 
@@ -740,45 +667,8 @@ void clawUp(){
   ledcWrite(clawCH1, 0);
 }
 
-void resetRotaryCount(){
-  clickCounterL = 0;
-  prev_clickL = 0;
-  clickCounterR = 0;
-  prev_clickR = 0;
-}
-
-void clickCountLeft(){
-  clickL = 2 * digitalRead(rotaryPin1) + 1 * digitalRead(rotaryPin2);
-  if(clickL == 1 && prev_clickL == 3 || clickL == 0 && prev_clickL == 1 ||
-   clickL == 2 && prev_clickL == 0 || clickL == 3 && prev_clickL == 2){
-    clickCounterL--;
-   } else if (clickL == 3 && prev_clickL == 1 || clickL == 2 && prev_clickL == 3 ||
-   clickL == 0 && prev_clickL == 2 || clickL == 1 && prev_clickL == 0){
-    clickCounterL++;
-   }
-  prev_clickL = clickL;
-  if((abs(clickCounterL) + abs(clickCounterR)) / 2 == upToClicksG){
-    lineFollowFlag == false;
-  }
-}
-
-void clickCountRight(){
-  clickR = 2 * digitalRead(rotaryPin3) + 1 * digitalRead(rotaryPin4);
-  if(clickR == 1 && prev_clickR == 3 || clickR == 0 && prev_clickR == 1 ||
-   clickR == 2 && prev_clickR == 0 || clickR == 3 && prev_clickR == 2){
-    clickCounterR--;
-   } else if (clickR == 3 && prev_clickR == 1 || clickR == 2 && prev_clickR == 3 ||
-   clickR == 0 && prev_clickR == 2 || clickR == 1 && prev_clickR == 0){
-    clickCounterR++;
-   }
-  prev_clickR = clickR;
-  if((abs(clickCounterL) + abs(clickCounterR)) / 2 == upToClicksG){
-    lineFollowFlag == false;
-  }
-}
-
 void IRCount(){
-  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 500){
+  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 250){
     IRCounter++;
     prevTime = millis();
     if(IRCounter == position_difference){
@@ -807,11 +697,11 @@ void toggleLED(void *params){
       vTaskDelay(1/portTICK_PERIOD_MS);
       }
     if (digitalRead(IR_sideLeft)) {
-      changeMUX(0, 0, 1);
+      changeMUX(1, 0, 1);
       vTaskDelay(1/portTICK_PERIOD_MS);
       }
     if (digitalRead(IR_sideRight)) {
-      changeMUX(1, 0, 1);
+      changeMUX(0, 0, 1);
       vTaskDelay(1/portTICK_PERIOD_MS);
     }
     if (LED7Flag) {
