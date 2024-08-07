@@ -229,7 +229,7 @@ void loop() {
   // backUp();
   // turn('r');
   // locateServeArea(4);
-  lastTurn('r');
+  lastTurn('l');
   // setSpeed('f','f',1200,1200);
   // vTaskDelay(2500 / portTICK_PERIOD_MS);
   // stop();
@@ -319,12 +319,11 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_sideRight) && getError() != -0.01){
-      setSpeed('b','f', turn_speed, turn_speed);
-    } 
-    while(!digitalRead(IR_sideLeft) && getError() != -0.01){
-      setSpeed('f','b', turn_speed, turn_speed);
-    } 
+    if (!digitalRead(IR_sideLeft)) {
+      while(!digitalRead(IR_sideLeft) && getError() != -0.01){
+        setSpeed('f','b', turn_speed, turn_speed);
+      }  
+    }
   } else if(direction == 'l'){
     setSpeed('f','b', set_speed, set_speed);
     vTaskDelay(250 / portTICK_PERIOD_MS);
@@ -333,12 +332,14 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_sideRight) && getError() != -0.01){
+    if (!digitalRead(IR_sideRight)) {
+      while(!digitalRead(IR_sideRight) && getError() != -0.01){
         setSpeed('b','f', turn_speed, turn_speed);
       }
     }
-    stop();
-    LED7Flag = false;
+  }
+  stop();
+  LED7Flag = false;
 }
 
 
