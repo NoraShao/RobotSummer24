@@ -213,6 +213,9 @@ void startToCheese();
 void tomatoToCheese();
 //after grabbing tomato, goes to cheese, drops on cheese, and grabs cheese and tomato together
 
+void move(char direction, int runTime);
+//moves in specified direction for specified time (ms)
+
 void tomatoToPlate();
 //after grabbing tomato, goes to plate, drops tomato on plate, and grabs up plate
 
@@ -314,6 +317,7 @@ void setup() {
 
 void loop() {
   startUp();
+  setSpeed('f', 'f', set_speed, set_speed);
   // cheesePlate();
   //backUp();
   // goTo(3);
@@ -321,23 +325,26 @@ void loop() {
   // linefollowTimer('f', 2000);
   // grab("cheese");
   // setSpeed('f', 'f', set_speed, set_speed);
-  // startToTomato;
-  // tomatoToCheese;
-  // cheeseToPlate;
+
+  // grab("tomato");
+
+  // startToTomato();
+  // tomatoToCheese();
+  // cheeseToPlate();
 
   // goTo(1);
   // turn('l');
   // linefollowTimer('f', 800);
-  grab("tomato");
+  // grab("tomato");
   // backUp();
-  // turn('l');
-  // turn('l');
+  // turn('r');
+  // turn('r');
   // linefollowTimer('f', 900);
   // grab("cheese");
   // backUp();
   // turn('l');
 
-  shutDown();
+  // shutDown();
 
   // ledcWrite(clawCH1, updownSpeed);
   // ledcWrite(clawCH2, 0);
@@ -485,7 +492,7 @@ while(time > currentTime - initialTimer){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
+    // case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
     case 8: setSpeed('f','f', set_speedT, 0.65); break;
     case 12: setSpeed('f','f', set_speedT, set_speedT * 0.75); break;
     case 14: setSpeed('f','f', set_speedT, set_speedT * 0.8); break;
@@ -921,11 +928,24 @@ void startToCheese() {
 
 void tomatoToCheese() {
   backUp();
-  turn('l');
-  turn('l');
+  turn('r');
+  move('f', 500);
+  turn('r');
   linefollowTimer('f', 1200); // to counter
   release();
   grab("cheese"); // may need to adjust distance to counter?
+}
+
+void move(char direction, int runTime) {
+  if (direction == 'f') {
+    ledcWrite(clawCH1, updownSpeed);
+    ledcWrite(clawCH2, 0);
+    vTaskDelay(runTime/portTICK_PERIOD_MS);
+  } else if (direction == 'b') {
+    ledcWrite(clawCH1, updownSpeed);
+    ledcWrite(clawCH2, 0);
+    vTaskDelay(runTime/portTICK_PERIOD_MS);
+  }
 }
 
 void tomatoToPlate() {
