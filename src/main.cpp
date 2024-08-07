@@ -35,7 +35,7 @@ const int PWMFreq = 100;
 
 //speed control
 const double set_speed = 1200;
-const double turn_speed = 1200;
+const double turn_speed = 1000;
 
 //locating serving area
 const int serve_area_far = 4000;
@@ -54,11 +54,11 @@ const int cheeseAngle = 97 + offsetAngle; // flat sides (not diagonally on corne
 const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
-const int plateAngle = 70;
+const int plateAngle = 85;
 const int updownSpeed = 2500;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 3000; // 2750
+const unsigned long upTime = 4500; // 2750
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -320,7 +320,7 @@ while(lineFollowFlag){
   int farRightIR_reading = digitalRead(IR_farRight);
   int bitSum = 8 * farLeftIR_reading + 4 * leftIR_reading + 2 * rightIR_reading + 1 * farRightIR_reading;
   switch(bitSum){
-    case 0: setSpeed('b','b', set_speed * 0.85, set_speed * 0.85); break;
+    case 0: setSpeed('b','b', set_speed , set_speed); break;
     case 8: setSpeed('f','f', set_speed, 0.75); break;
     case 12: setSpeed('f','f', set_speed, set_speed * 0.8); break;
     case 14: setSpeed('f','f', set_speed, set_speed * 0.85); break;
@@ -390,14 +390,17 @@ void goTo(int positionChange){
 
 void backUp(){
   LED7Flag = true;
-  bool IR_sideLeftFlag = false, IR_sideRightFlag = false;
-  while(!(IR_sideRightFlag)){
+  bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
+  while(!exit){
     setSpeed('b','b',set_speed * 1.2, set_speed * 1.2);
-    if(!digitalRead(IR_sideLeft)){
+    if(digitalRead(IR_sideLeft)){
       IR_sideLeftFlag = true;
     }
     if(digitalRead(IR_sideRight)){
       IR_sideRightFlag = true;
+    }
+    if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
+      exit = true;
     }
   }
   stop();
@@ -471,7 +474,7 @@ void grab(String food){
   while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
   // close claw to clamp food
@@ -631,23 +634,25 @@ void salad(){
   goTo(4);
   turn('l');
   linefollowTimer('f',3000);
-  stack("bottombun");
+  stack("tomato");
   backUp();
   turn('l');
   turn('l');
-  linefollowTimer('f',3000);
+  linefollowTimer('f',3500);
   grab("lettuce");
   backUp();
   turn('r');
   turn('r');
   linefollowTimer('f',3000);
   stack("tomato");
+  grab("plate");
   backUp();
   turn('l');
   locateServeArea(1);
   lastTurn('l');
   setSpeed('f','f',1200,1200);
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  vTaskDelay(3000 / portTICK_PERIOD_MS);
+  stop();
   stack("plate");
 }
 
