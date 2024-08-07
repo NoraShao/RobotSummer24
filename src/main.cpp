@@ -222,6 +222,9 @@ void cheeseToPlate();
 void lettuceToPlate();
 //after grabbing lettuce, goes to plate, drops lettuce on plate, and grabs up plate
 
+void plateToLettuce();
+//after stacking something on plate, goes to lettuce counter and grabs lettuce
+
 void plateToServe();
 //after grabbing plate, goes to serving area, and serves plate from platform
 
@@ -300,7 +303,7 @@ void setup() {
 
 void loop() {
   startUp();
-  
+
   // clawServo.write(cheeseAngle);
   // delay(2000);
   // clawServo.write(fullRetract);
@@ -922,6 +925,14 @@ void lettuceToPlate() {
   grab("plate");
 }
 
+void plateToLettuce() {
+  backUp();
+  turn('l');
+  turn('l');
+  linefollowTimer('f', 2000);
+  grab("lettuce");
+}
+
 void plateToServe() {
   backUp();
   turn('l');
@@ -942,57 +953,20 @@ void cuttingToServe() {
   release();
 }
 
-// void cheesePlate(){
-//   goTo(1);
-//   turn('r');
-//   linefollowTimer('f', 800);
-//   grab("cheese"); 
-//   backUp();
-//   turn('l');
-//   goTo(5);
-//   turn('l');
-//   linefollowTimer('f', 2000);
-// }
-
-void cheesePlate(){
-  goTo(1);
-  turn('r');
-  linefollowTimer('f', 800); // robot2 delay
-  grab("cheese"); 
-  backUp();
-  turn('l');
-  goTo(5);
-  turn('l');
-  linefollowTimer('f', 2000); // robot2 delay
-  stack("cheese");
-  grab("plate");
-  backUp();
-  turn('l');
-  locateServeArea(1);
-  lastTurn('l');
-  linefollowTimer('f', 2000); //robot2 delay
-  stop();
-  stack("plate");
+void cheesePlate() {
+  startToCheese();
+  cheeseToPlate();
+  plateToServe();
 }
 
-void salad(){
-  goTo(2);
-  turn('l');
-  linefollowTimer('f', 800); // robot2 delay
-  grab("tomato");
-  backUp();
-  turn('r');
-  goTo(4);
-  turn('l');
-  linefollowTimer('f', to_counter_time);
-  stack("tomato");
-  grabStackOnPlatform("plate", 'l');
-  turn('l'); // to turn 180?
-  linefollowTimer('f', to_counter_time);
-  grabStackOnPlatform("lettuce", 'r');
-  locateServeArea(1);
-  turn('l');
-  grabFromPlatform();
-  linefollowTimer('f', to_counter_time);
-  release();
+void salad() {
+  startToTomato();
+  tomatoToPlate();
+  plateToLettuce();
+  lettuceToPlate();
+  plateToServe();
+  // startToTomato();
+  // tomatoToCheese();
+  // cheeseToPlate();
+  // plateToServe();
 }
