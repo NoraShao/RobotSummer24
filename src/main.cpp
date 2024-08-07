@@ -55,10 +55,11 @@ const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
 const int plateAngle = 85;
-const int updownSpeed = 2500;
+const int updownSpeed = 4000;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 4500; // 2750
+const unsigned long upTime = 4800; // 4500, 2750
+const unsigned long upTimeRelease = 1000;
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -205,7 +206,16 @@ void setup() {
 //loop
 
 void loop() {
-  startUp();
+  // startUp();
+
+  grab("tomato");
+  release();
+  grab("cheese");
+  delay(1000);
+  release();
+  delay(500);
+
+
   // salad();
   // goTo(1);
   // turn('r');
@@ -229,12 +239,12 @@ void loop() {
   // backUp();
   // turn('r');
   // locateServeArea(4);
-  lastTurn('l');
+  // lastTurn('r');
   // setSpeed('f','f',1200,1200);
   // vTaskDelay(2500 / portTICK_PERIOD_MS);
   // stop();
   // stack("plate");
-  shutDown();
+  // shutDown();
 }
 
 //function definitions
@@ -531,7 +541,7 @@ void release(){
   // raise claw
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
-  vTaskDelay((upTime - 2000) / portTICK_PERIOD_MS);
+  vTaskDelay((upTimeRelease) / portTICK_PERIOD_MS);
   ledcWrite(clawCH1, 0);
 }
 
