@@ -176,6 +176,8 @@ void getTopBun();
 void stackOnPlatform(String food);
 //stack food or plate on platform and retract platform
 
+//NAVIGATION START(2) counter functions
+
 void startToTomato();
 //starts from from start line and grabs tomato
 
@@ -212,6 +214,41 @@ void cuttingToServe();
 void serveToStart();
 //returns to start position after serving plate
 
+
+//NAVIGATION START(1) counter functions
+
+void startToPatty();
+//starts from start line and grabs patty
+
+void startToBottomBun();
+//starts from start line and grabs bottom bun
+
+void pattyToCook(String platform);
+//after picking up patty, goes to cook counter and cooks patty
+
+void startToPlate();
+//starts from start line and grabs plate
+
+void plateToPatty(String platform);
+//after grabbing plate, goes to patty counter and grabs patty
+
+void plateToBun(String bunType, String platform);
+//after grabbing plate, goes to bun counter and grabs bottom bun
+
+void bunToPatty(String platform);
+//after grabbing bun, goes to patty counter and grabs patty
+
+void cookToTopBun(String platform);
+//after cooking patty, goes to bun counter and grabs bun
+
+void topBunToServeOnCut(String platform);
+//after grabbing top bun, goes to cutting counter and serves plate to pass to robot2
+
+void cutToStart();
+//after serving plate at cutting counter, return to start (and backup behind tomato counter line)
+
+//functions for either counter
+
 void counterToCounter(int upToValue, String food, char turnDirection, String grabOrStack, String startOrBackUp);
 //navigates from counter to counter and grabs food
 
@@ -222,6 +259,9 @@ void salad();
 
 void deluxeCheeseBurger();
 //makes deluxeCheeseBurger
+
+void burger();
+//makes plain burger and places on cutting counter
 
 //set up
 
@@ -912,6 +952,109 @@ void serveToStart() {
   linefollowTimer('b', 100);
 }
 
+void startToPatty() {
+  goTo(2);
+  turn('l');
+  linefollowTimer('f', 1200); //to counter
+  grab("patty");
+}
+
+void startToBottomBun() {
+  goTo(4);
+  turn('l');
+  linefollowTimer('f', 1200); //to counter
+  grab("bottomBun");
+}
+
+void pattyToCook(String platform) {
+  backUp();
+  turn('r');
+  if (platform == "platform") {
+    stackOnPlatform("food");
+  }
+  goTo(3);
+  turn('r');
+  linefollowTimer('f', 1200); //to counter
+  release();
+  vTaskDelay(10000/portTICK_PERIOD_MS);
+  grab("patty");
+}
+
+void startToPlate() {
+  goTo(7);
+  turn('r');
+  linefollowTimer('f', 1200); //to counter
+  grab("plate");
+}
+
+void plateToPatty(String platform) {
+  backUp();
+  turn('r');
+  if (platform == "platform") {
+    stackOnPlatform("plate");
+  }
+  goTo(5);
+  linefollowTimer('f', 1200); //to counter
+  grab("patty");
+}
+
+void plateToBun(String bunType, String platform) {
+  backUp();
+  turn('r');
+  if (platform == "platform") {
+    stackOnPlatform("food");
+  }
+  goTo(3);
+  turn('r');
+  linefollowTimer('f', 1200); //to counter
+  grab(bunType);
+}
+
+void bunToPatty(String platform) {
+  backUp();
+  turn('l');
+  if (platform == "platform") {
+    stackOnPlatform("food");
+  }
+  goTo(2);
+  turn('r');
+  linefollowTimer('f', 1200); //to counter
+  grab("patty");
+}
+
+void cookToTopBun(String platform) {
+  backUp();
+  turn('r');
+  if (platform == "platform") {
+    stackOnPlatform("food");
+  }
+  goTo(1);
+  turn('r');
+  linefollowTimer('f', 1200); //to counter
+  grab("topBun");
+}
+
+void topBunToServeOnCut(String platform) {
+  backUp();
+  turn('l');
+  goTo(1);
+  turn('l');
+  if (platform == "platform") {
+    stackOnPlatform("food");
+  }
+  linefollowTimer('f', 1200); //to counter
+  release();
+}
+
+void cutToStart() {
+  backUp();
+  turn('l');
+  goTo(2);
+  turn('l');
+  turn('l');
+  linefollowTimer('f', 100); //backup behind tomato counter line
+}
+
 void counterToCounter(int goToValue, String food, char turnDirectionStart, char turnDirectionEnd, int turnAngle, String grabOrStack, String startOrBackUp) {
   if (startOrBackUp == "backup") {
     backUp();
@@ -976,4 +1119,14 @@ void deluxeCheeseBurger() {
   linefollowTimer('f', 1500);
   grab("plate");
   plateToServe();
+}
+
+void burger() {
+  startToPlate();
+  plateToBun("bottomBun", "platform");
+  bunToPatty("platform");
+  pattyToCook("platform");
+  pattyToCook("platform");
+  cookToTopBun("platform");
+  topBunToServeOnCut("platform");
 }
