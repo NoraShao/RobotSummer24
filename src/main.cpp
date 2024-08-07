@@ -56,12 +56,21 @@ const int cheeseAngle = 94;  // 97 flat sides (not diagonally on corners)
 const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
+<<<<<<< HEAD
 const int plateAngle = 70;
 const int fullRetract = 31 + offsetAngle;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
 const unsigned long upTime = 2000; // 2750
+=======
+const int plateAngle = 85;
+const int updownSpeed = 4000;
+volatile int currentAngle = homeAngle;
+
+const unsigned long upTime = 4800; // 4500, 2750
+const unsigned long upTimeRelease = 1000;
+>>>>>>> 823bc92ea0dd72d46b9eeb87a4b0541a624d49bc
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -273,7 +282,49 @@ void setup() {
 //loop
 
 void loop() {
+<<<<<<< HEAD
   setSpeed('f', 'f', set_speed, set_speed);
+=======
+  // startUp();
+
+  grab("tomato");
+  release();
+  grab("cheese");
+  delay(1000);
+  release();
+  delay(500);
+
+
+  // salad();
+  // goTo(1);
+  // turn('r');
+  // linefollowTimer('f', 1800);
+  // grab("lettuce");
+  // backUp();
+  // turn('l');
+  // turn('l');
+  // linefollowTimer('f', 1800);
+  // release();
+  // grab("plate");
+  // backUp();
+  // turn('r');
+  // locateServeArea(1);
+  // lastTurn('l');
+  // setSpeed('f','f',1200,1200);
+  // vTaskDelay(3000 / portTICK_PERIOD_MS);
+  // stop();
+  // stack("plate");
+
+  // backUp();
+  // turn('r');
+  // locateServeArea(4);
+  // lastTurn('r');
+  // setSpeed('f','f',1200,1200);
+  // vTaskDelay(2500 / portTICK_PERIOD_MS);
+  // stop();
+  // stack("plate");
+  // shutDown();
+>>>>>>> 823bc92ea0dd72d46b9eeb87a4b0541a624d49bc
 }
 
 //function definitions
@@ -358,12 +409,11 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_sideRight) && getError() != -0.01){
-      setSpeed('b','f', turn_speed, turn_speed);
-    } 
-    while(!digitalRead(IR_sideLeft) && getError() != -0.01){
-      setSpeed('f','b', turn_speed, turn_speed);
-    } 
+    if (!digitalRead(IR_sideLeft)) {
+      while(!digitalRead(IR_sideLeft) && getError() != -0.01){
+        setSpeed('f','b', turn_speed, turn_speed);
+      }  
+    }
   } else if(direction == 'l'){
     setSpeed('f','b', set_speed, set_speed);
     vTaskDelay(250 / portTICK_PERIOD_MS);
@@ -372,12 +422,14 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
-    while(!digitalRead(IR_sideRight) && getError() != -0.01){
+    if (!digitalRead(IR_sideRight)) {
+      while(!digitalRead(IR_sideRight) && getError() != -0.01){
         setSpeed('b','f', turn_speed, turn_speed);
       }
     }
-    stop();
-    LED7Flag = false;
+  }
+  stop();
+  LED7Flag = false;
 }
 
 
@@ -569,7 +621,7 @@ void release(){
   // raise claw
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
-  vTaskDelay((upTime - 2000) / portTICK_PERIOD_MS);
+  vTaskDelay((upTimeRelease) / portTICK_PERIOD_MS);
   ledcWrite(clawCH1, 0);
 }
 
