@@ -38,8 +38,8 @@ const double set_speed = 1200;
 const double turn_speed = 1000;
 
 //locating serving area
-const int serve_area_far = 4000;
-const int serve_area_close = 2000;
+const int serve_area_far = 3850; //4000
+const int serve_area_close = 1200; //2000
 
 //turning
 unsigned long prevTime = millis();
@@ -206,7 +206,34 @@ void setup() {
 
 void loop() {
   startUp();
-  salad();
+  // salad();
+  // goTo(1);
+  // turn('r');
+  // linefollowTimer('f', 1800);
+  // grab("lettuce");
+  // backUp();
+  // turn('l');
+  // turn('l');
+  // linefollowTimer('f', 1800);
+  // release();
+  // grab("plate");
+  // backUp();
+  // turn('r');
+  // locateServeArea(1);
+  // lastTurn('l');
+  // setSpeed('f','f',1200,1200);
+  // vTaskDelay(3000 / portTICK_PERIOD_MS);
+  // stop();
+  // stack("plate");
+
+  // backUp();
+  // turn('r');
+  // locateServeArea(4);
+  lastTurn('r');
+  // setSpeed('f','f',1200,1200);
+  // vTaskDelay(2500 / portTICK_PERIOD_MS);
+  // stop();
+  // stack("plate");
   shutDown();
 }
 
@@ -292,6 +319,9 @@ void lastTurn(char direction){
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
+    while(!digitalRead(IR_sideRight) && getError() != -0.01){
+      setSpeed('b','f', turn_speed, turn_speed);
+    } 
     while(!digitalRead(IR_sideLeft) && getError() != -0.01){
       setSpeed('f','b', turn_speed, turn_speed);
     } 
@@ -500,7 +530,7 @@ void release(){
   // raise claw
   ledcWrite(clawCH1, updownSpeed);
   ledcWrite(clawCH2, 0);
-  vTaskDelay(upTime / portTICK_PERIOD_MS);
+  vTaskDelay((upTime - 2000) / portTICK_PERIOD_MS);
   ledcWrite(clawCH1, 0);
 }
 
