@@ -301,9 +301,9 @@ void setup() {
   ledcAttachPin(clawIN2, clawCH2);
   clawServo.attach(servo1IN);
   clawServo.write(fullRetract);
-  pinionServo.attach(servo2IN);
-  pinionServo.writeMicroseconds(stopPW);
-  homePlatform();
+  // pinionServo.attach(servo2IN);
+  // pinionServo.writeMicroseconds(stopPW);
+  // homePlatform();
 
   //freeRTOS
   xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDHandle);
@@ -313,7 +313,23 @@ void setup() {
 //loop
 
 void loop() {
-  setSpeed('f', 'f', set_speed, set_speed);
+  startUp();
+
+  //burger
+
+  // startToPlate();
+
+  // plateToBun("bottomBun", "platform");
+
+  // bunToPatty("platform");
+  // pattyToCook("platform");
+  // pattyToCook("platform");
+  // cookToTopBun("platform");
+  // topBunToServeOnCut("platform");
+
+  backUp();
+
+  shutDown();
 }
 
 //function definitions
@@ -501,7 +517,7 @@ void backUp(){
   LED7Flag = true;
   bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
   while(!exit){
-    setSpeed('b','b',set_speed * 1.2, set_speed * 1.2);
+    setSpeed('b','b',set_speed * 0.65, set_speed * 0.65);
     if(digitalRead(IR_sideLeft)){
       IR_sideLeftFlag = true;
     }
@@ -510,6 +526,13 @@ void backUp(){
     }
     if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
       exit = true;
+    }
+  }
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  if (!digitalRead(IR_sideLeft) && !digitalRead(IR_sideRight)) {
+    while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideRight)) {
+      setSpeed('f', 'f', set_speed * 0.65, set_speed * 0.65);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
   }
   stop();
@@ -571,7 +594,7 @@ void grab(String food){
     finalAngle = cheeseAngle; 
   } else if (food == "plate"){
     finalAngle = plateAngle;
-    homeAngle = homeAngle - 23;
+    // homeAngle = homeAngle - 23;
   }
   // open claw
   for(int i = currentAngle; i >= homeAngle; i--){
@@ -583,7 +606,7 @@ void grab(String food){
   while(!digitalRead(microswitch)){
     ledcWrite(clawCH1, 0);
     ledcWrite(clawCH2, updownSpeed);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
   }
   ledcWrite(clawCH2, 0);
   // close claw to clamp food
