@@ -26,8 +26,8 @@
 #define clawMovePin 2
 #define servo1IN 27
 #define servo2IN 33
-#define clawIN1 14
-#define clawIN2 12
+#define clawIN1 12 //12 for robot1, 14 for robot2
+#define clawIN2 14 //14 for robot1, 12 for robot2
 
 //PWM setup
 const int CH1 = 4;
@@ -153,7 +153,7 @@ void cook();
 void movePlatform(String food);
 //stacks food on platform
 
-void serveFromPlatform();
+void grabFromPlatform();
 //serve plate from platform
 
 void homePlatform();
@@ -200,6 +200,33 @@ void getPatty();
 void getBottomBun();
 
 void getTopBun();
+
+void stackOnPlatform(String food);
+//stack food or plate on platform and retract platform
+
+void startToTomato();
+//starts from from start line and grabs tomato
+
+void startToCheese();
+//starts from from start line and grabs cheese
+
+void tomatoToCheese();
+//after grabbing tomato, goes to cheese, drops on cheese, and grabs cheese and tomato together
+
+void tomatoToPlate();
+//after grabbing tomato, goes to plate, drops tomato on plate, and grabs up plate
+
+void cheeseToPlate();
+//after grabbing cheese, goes to plate, drops cheese on plate, and grabs up plate
+
+void lettuceToPlate();
+//after grabbing lettuce, goes to plate, drops lettuce on plate, and grabs up plate
+
+void plateToServe();
+//after grabbing plate, goes to serving area, and serves plate from platform
+
+void cuttingToServe();
+//after grabbing top bun from cutting counter, stacks on platform, goes to serving area, and serves plate
 
 void cheesePlate();
 //makes cheese plate
@@ -869,11 +896,88 @@ void grabStackOnPlatform(String food, char finalTurnDirection) {
   homePlatform();
 }
 
-void serveFromPlatform() {
-  ledcWrite(clawCH1, 0);
-  ledcWrite(clawCH2, updownSpeed);
+void grabFromPlatform() {
+  movePlatform("plate");
   grab("plate");
   homePlatform();
+}
+
+void stackOnPlatform(String food) {
+  movePlatform(food);
+  release();
+  homePlatform();
+}
+
+void startToTomato() {
+  goTo(1);
+  turn('r');
+  linefollowTimer('f', 2000);
+  grab("tomato");
+}
+
+void startToCheese() {
+  goTo(1);
+  turn('l');
+  linefollowTimer('f', 2000);
+  grab("cheese");
+}
+
+void tomatoToCheese() {
+  backUp();
+  turn('l');
+  turn('l');
+  linefollowTimer('f', 2000);
+  release();
+  grab("cheese"); // may need to adjust distance to counter?
+}
+
+void tomatoToPlate() {
+  backUp();
+  turn('r');
+  goTo(3);
+  turn('l');
+  linefollowTimer('f', 2000);
+  release(); // may need to backup before dropping tomato on plate?
+  grab("plate");
+}
+
+void cheeseToPlate() {
+  backUp();
+  turn('l');
+  goTo(3);
+  turn('l');
+  linefollowTimer('f', 2000);
+  release(); // may need to backup before dropping cheese on plate?
+  grab("plate");
+}
+
+void lettuceToPlate() {
+  backUp();
+  turn('l');
+  turn('l');
+  linefollowTimer('f', 2000);
+  release(); // may need to backup before dropping lettuce on plate?
+  grab("plate");
+}
+
+void plateToServe() {
+  backUp();
+  turn('l');
+  linefollowTimer('f', 2000); // need to test & adjust time to get to serving area
+  turn('l');
+  linefollowTimer('f', 2000);
+  release();
+}
+
+void cuttingToServe() {
+  backUp();
+  turn('r');
+  linefollowTimer('f', 1000);  // need to test & adjust time to get to serving area
+  turn('r');
+  stackOnPlatform("food");
+  grabFromPlatform();
+  linefollowTimer('f', 2000);
+  release();
 }
 
 // void cheesePlate(){
@@ -926,7 +1030,7 @@ void salad(){
   grabStackOnPlatform("lettuce", 'r');
   locateServeArea(1);
   turn('l');
-  serveFromPlatform();
+  grabFromPlatform();
   linefollowTimer('f', to_counter_time);
   release();
 }
