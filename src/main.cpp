@@ -55,8 +55,8 @@ unsigned long prevTime = millis();
 const int offsetAngle = -5;
 const int homeAngle = 47;
 const int lettuceAngle = 101 + offsetAngle;
-const int tomatoAngle = 92;
-const int cheeseAngle = 97 + offsetAngle; // flat sides (not diagonally on corners)
+const int tomatoAngle = 96;  // 92;
+const int cheeseAngle = 93;  // 97 + offsetAngle; // flat sides (not diagonally on corners)
 const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
@@ -284,6 +284,7 @@ void setup() {
   clawServo.write(fullRetract);
   pinionServo.attach(servo2IN);
   pinionServo.writeMicroseconds(stopPW);
+  homePlatform();
 
   //freeRTOS
   xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDHandle);
@@ -298,53 +299,14 @@ void setup() {
 //loop
 
 void loop() {
-  //pinionServo.writeMicroseconds(stopPW);
   startUp();
-  //ledcWrite(clawCH1, updownSpeed);
-  //ledcWrite(clawCH2, 0);
-  // cheesePlate();
-  // shutDown();
-  // linefollow('f');
-  goTo(1);
-  turn('r');
-  linefollowTimer('f', 2000);
-  grabStackOnPlatform("plate", 'l');
-  delay(1000);
-  goTo(1);
   
-
-  // goTo(5);
-  // turn('l');
-  // linefollowTimer('f', 800);
-  // grab("plate");
-  // backUp();
-  // shutDown();
-
-  // clawUp();
-  // ledcWrite(clawCH1, updownSpeed);
-  // ledcWrite(clawCH2, 0);
-
-  // homePlatform();
-  // grab("plate");
-  // movePlatform("plate");
-  // release();
-  // homePlatform();
-  // delay(1000);  //stack other food on platform & move to serve area here
-  // grab("tomato");
-  // movePlatform("tomato");
-  // release();
-  // homePlatform();
-  // delay(1000); //move to serving area
-  // movePlatform("plate");
-  // grab("plate");
-  // homePlatform();
-  // release();
-  // delay(1500);  
-
-  // homePlatform();
+  // clawServo.write(cheeseAngle);
+  // delay(2000);
+  // clawServo.write(fullRetract);
   // delay(1000);
-  // movePlatform("plate");
-  // delay(1000);
+
+  grab("cheese");
 }
 
 //function definitions
