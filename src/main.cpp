@@ -40,7 +40,7 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 2800;
+const double set_speed = 3000;
 const double turn_speed = 1500;
 const double to_counter_time = 2000; // robot2 time
 
@@ -53,10 +53,10 @@ unsigned long prevTime = millis();
 
 //claw
 const int offsetAngle = -5;
-const int homeAngle = 47;
+int homeAngle = 70; // 47
 const int lettuceAngle = 101 + offsetAngle;
 const int tomatoAngle = 96;  // 92;
-const int cheeseAngle = 93;  // 97 + offsetAngle; // flat sides (not diagonally on corners)
+const int cheeseAngle = 94;  // 97 flat sides (not diagonally on corners)
 const int pattyAngle = 96 + offsetAngle;
 const int topBunAngle = 98 + offsetAngle;
 const int bottomBunAngle = 95 + offsetAngle;
@@ -65,7 +65,7 @@ const int fullRetract = 31 + offsetAngle;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 2500; // 2750
+const unsigned long upTime = 4500; // 2750
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -222,6 +222,9 @@ void cheeseToPlate();
 void lettuceToPlate();
 //after grabbing lettuce, goes to plate, drops lettuce on plate, and grabs up plate
 
+void lettuceToPlateStack();
+//same as lettuce to plate but doesn't pick up plate (only drops lettuce)
+
 void plateToLettuce();
 //after stacking something on plate, goes to lettuce counter and grabs lettuce
 
@@ -231,12 +234,17 @@ void plateToServe();
 void cuttingToServe();
 //after grabbing top bun from cutting counter, stacks on platform, goes to serving area, and serves plate
 
+void serveToStart();
+//returns to start position after serving plate
+
 void cheesePlate();
 //makes cheese plate
 
 void salad();
 //makes salad
 
+void deluxeCheeseBurger();
+//makes deluxeCheeseBurger
 
 //set up
 
@@ -303,13 +311,23 @@ void setup() {
 
 void loop() {
   startUp();
+  // cheesePlate();
+  //backUp();
+  goTo(1);
+  turn('l');
+  linefollowTimer('f', 1500);
+  grab("tomato");
+  // goTo(3);
+  // turn('l');
+  // linefollowTimer('f', 2000);
+  // grab("cheese");
+  // setSpeed('f', 'f', set_speed, set_speed);
+  // startToTomato;
+  // tomatoToCheese;
+  shutDown();
 
-  // clawServo.write(cheeseAngle);
-  // delay(2000);
-  // clawServo.write(fullRetract);
-  // delay(1000);
-
-  grab("cheese");
+  // ledcWrite(clawCH1, updownSpeed);
+  // ledcWrite(clawCH2, 0);
 }
 
 //function definitions
@@ -360,26 +378,26 @@ void setSpeed(char left_motor, char right_motor, int speed_left, int speed_right
 void turn(char direction){
   LED7Flag = true;
   if(direction == 'r'){
-    setSpeed('b','f', set_speed * 0.75, set_speed * 0.85);
+    setSpeed('b','f', set_speed * 0.8, set_speed * 0.8);
     vTaskDelay(250 / portTICK_PERIOD_MS);
     while(getError() != 0){
-      setSpeed('b','f', turn_speed, turn_speed);
+      setSpeed('b','f', turn_speed * 0.8, turn_speed * 0.8);
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
     while(getError() != 0){
-      setSpeed('f','b', turn_speed, turn_speed);
+      setSpeed('f','b', turn_speed * 0.8, turn_speed * 0.8);
     } 
   } else if(direction == 'l'){
-    setSpeed('f','b', set_speed, set_speed * 0.7);
+    setSpeed('f','b', set_speed, set_speed * 0.8);
     vTaskDelay(250 / portTICK_PERIOD_MS);
     while(getError() != 0){
-      setSpeed('f','b', turn_speed, turn_speed);
+      setSpeed('f','b', turn_speed, turn_speed * 0.8);
     }
     stop();
     vTaskDelay(250 / portTICK_PERIOD_MS);
     while(getError() != 0){
-        setSpeed('b','f', turn_speed, turn_speed);
+        setSpeed('b','f', turn_speed * 0.8, turn_speed * 0.8);
       }
     }
     stop();
@@ -482,8 +500,8 @@ void goTo(int positionChange){
   linefollow('f');
 
   lineFollowFlag = true;
-  setSpeed('b','b',set_speed,set_speed);
-  vTaskDelay(175 / portTICK_PERIOD_MS);
+  //setSpeed('b','b',set_speed,set_speed);
+  //vTaskDelay(175 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
@@ -566,6 +584,7 @@ void grab(String food){
     finalAngle = cheeseAngle; 
   } else if (food == "plate"){
     finalAngle = plateAngle;
+    homeAngle = homeAngle - 23;
   }
   // open claw
   for(int i = currentAngle; i >= homeAngle; i--){
@@ -875,14 +894,14 @@ void stackOnPlatform(String food) {
 
 void startToTomato() {
   goTo(1);
-  turn('r');
+  turn('l');
   linefollowTimer('f', 2000);
   grab("tomato");
 }
 
 void startToCheese() {
   goTo(1);
-  turn('l');
+  turn('r');
   linefollowTimer('f', 2000);
   grab("cheese");
 }
@@ -925,6 +944,14 @@ void lettuceToPlate() {
   grab("plate");
 }
 
+void lettuceToPlateStack() {
+  backUp();
+  turn('l');
+  turn('l');
+  linefollowTimer('f', 2000);
+  release(); // may need to backup before dropping lettuce on plate?
+}
+
 void plateToLettuce() {
   backUp();
   turn('l');
@@ -953,6 +980,15 @@ void cuttingToServe() {
   release();
 }
 
+void serveToStart() {
+  backUp();
+  turn('r');
+  goTo(2);
+  turn('l');
+  turn('l');
+  linefollowTimer('b', 100);
+}
+
 void cheesePlate() {
   startToCheese();
   cheeseToPlate();
@@ -965,8 +1001,33 @@ void salad() {
   plateToLettuce();
   lettuceToPlate();
   plateToServe();
+
   // startToTomato();
-  // tomatoToCheese();
-  // cheeseToPlate();
-  // plateToServe();
+  // tomatoToPlate();
+  // backUp();
+  // turn('l');
+  // stackOnPlatform("plate");
+  // turn('l');
+  // linefollowTimer('f', 1200);
+  // grab("lettuce");
+  // backUp();
+  // turn('r');
+  // stackOnPlatform("lettuce");
+  // linefollowTimer('f', 2000);
+  // turn('l');
+  // grabFromPlatform();
+  // linefollowTimer('f', 1200);
+  // release();
+}
+
+void deluxeCheeseBurger() {
+  startToTomato();
+  tomatoToCheese();
+  cheeseToPlate();
+  plateToLettuce();
+  lettuceToPlateStack();
+  backUp();
+  linefollowTimer('f', 1500);
+  grab("plate");
+  plateToServe();
 }
