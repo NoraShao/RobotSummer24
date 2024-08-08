@@ -36,7 +36,7 @@ const int PWMRes = 12;
 const int PWMFreq = 100;
 
 //speed control
-const double set_speed = 3000;
+const double set_speed = 2500;
 const double turn_speed = 1500;
 const double to_counter_time = 2000; // robot2 time
 
@@ -61,7 +61,7 @@ const int fullRetract = 31 + offsetAngle;
 const int updownSpeed = 2048;
 volatile int currentAngle = homeAngle;
 
-const unsigned long upTime = 2000; // 2750
+const unsigned long upTime = 3000; // 2750
 const int servoSpeed = 150;
 const int stopPW = 1500;
 const int CWPW = 1300;
@@ -315,15 +315,29 @@ void setup() {
 void loop() {
   startUp();
 
-  goTo(1);
-  turn('r');
-  linefollowTimer('f', 2000);
-  grab("tomato");
-  backUp();
-  turn('l');
+  // goTo(1);
+  // turn('r');
+  // linefollowTimer('f', 2000);
+  // grab("tomato");
+  // backUp();
+  // turn('l');
   
 
   //burger
+
+  goTo(4);
+  turn('l');
+  linefollowTimer('f', 2000);
+  grab("bottomBun");
+  backUp();
+  turn('r');
+  goTo(3);
+  while(!digitalRead(IR_sideRight || !digitalRead(IR_sideLeft))) {
+    setSpeed('b', 'b', set_speed * 0.6, set_speed * 0.6);
+  }
+  turn('r');
+  linefollowTimer('f', 2000);
+  release();
 
   // startToPlate();
   // plateToBun("bottomBun", "platform");
@@ -517,7 +531,7 @@ void goTo(int positionChange){
   linefollow('f');
   lineFollowFlag = true;
   //setSpeed('b','b',set_speed,set_speed);
-  //vTaskDelay(175 / portTICK_PERIOD_MS);
+  // vTaskDelay(2 / portTICK_PERIOD_MS);
   stop();
   LED7Flag = false;
 }
