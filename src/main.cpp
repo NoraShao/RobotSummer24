@@ -315,10 +315,18 @@ void setup() {
 void loop() {
   startUp();
 
+  goTo(1);
+  turn('r');
+  linefollowTimer('f', 2000);
+  grab("tomato");
+  backUp();
+  turn('l');
+  
+
   //burger
 
-  startToPlate();
-  plateToBun("bottomBun", "platform");
+  // startToPlate();
+  // plateToBun("bottomBun", "platform");
 
   // bunToPatty("platform");
   // pattyToCook("platform");
