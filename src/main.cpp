@@ -49,7 +49,7 @@ unsigned long prevTime = millis();
 
 //claw
 const int offsetAngle = 0;
-int homeAngle = 70; // 47
+volatile int homeAngle = 70; // 47
 const int lettuceAngle = 101 + offsetAngle;
 const int tomatoAngle = 96;  // 92;
 const int cheeseAngle = 94;  // 97 flat sides (not diagonally on corners)
@@ -313,40 +313,46 @@ void setup() {
 //loop
 
 void loop() {
-  startUp();
+  // startUp();
 
-  // goTo(1);
+  goTo(7);
+  turn('r');
+  linefollowTimer('f', 2000);
+  // grab("plate");
+  backUp();
   // turn('r');
-  // linefollowTimer('f', 2000);
-  // grab("tomato");
-  // backUp();
-  // turn('l');
   
 
   //burger
+ 
+  // counter test 1
 
-  goTo(4);
-  turn('l');
-  linefollowTimer('f', 2000);
-  grab("bottomBun");
-  backUp();
-  turn('r');
-  goTo(3);
-  while(!digitalRead(IR_sideRight || !digitalRead(IR_sideLeft))) {
-    setSpeed('b', 'b', set_speed * 0.6, set_speed * 0.6);
-  }
-  turn('r');
-  linefollowTimer('f', 2000);
-  release();
+  // goTo(4);
+  // turn('l');
+  // linefollowTimer('f', 2000);
+  // grab("bottomBun");
+  // backUp();
+  // turn('r');
+  // goTo(3);
+  // while(!digitalRead(IR_sideRight || !digitalRead(IR_sideLeft))) {
+  //   setSpeed('b', 'b', set_speed * 0.6, set_speed * 0.6);
+  // }
+  // turn('r');
+  // linefollowTimer('f', 2000);
+  // release();
 
   // startToPlate();
   // plateToBun("bottomBun", "platform");
-
   // bunToPatty("platform");
   // pattyToCook("platform");
   // pattyToCook("platform");
   // cookToTopBun("platform");
   // topBunToServeOnCut("platform");
+
+  // grab("plate");
+  // ledcWrite(clawCH1, 0);
+  // ledcWrite(clawCH2, updownSpeed);
+  // vTaskDelay(2000 / portTICK_PERIOD_MS);
 
   // backUp();
   // turn('r');
@@ -479,10 +485,10 @@ while(lineFollowFlag){
     case 3: setSpeed('f','f', set_speed * 0.8, set_speed); break;
     case 1: setSpeed('f','f', 0.75, set_speed); break;
     case 15: setSpeed('b','b', set_speed, set_speed); vTaskDelay(300 / portTICK_PERIOD_MS);
-    lineFollowFlag = false; setSpeed('b','b', 0, 0);break;
+    lineFollowFlag = false; setSpeed('b','b', set_speed * 0.5, set_speed * 0.5); break; //or set speed to 0
     default: {
       setSpeed('f','f', set_speed, set_speed);
-    }
+    } 
   }
  }
  lineFollowFlag = true;
@@ -537,19 +543,22 @@ void goTo(int positionChange){
 }
 
 void backUp(){
-  // LED7Flag = true;
-  // bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
-  // while(!exit){
-  //   setSpeed('b','b',set_speed * 0.65, set_speed * 0.65);
-  //   if(digitalRead(IR_sideLeft)){
-  //     IR_sideLeftFlag = true;
-  //   }
-  //   if(digitalRead(IR_sideRight)){
-  //     IR_sideRightFlag = true;
-  //   }
-  //   if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
-  //     exit = true;
-  //   }
+  LED7Flag = true;
+  bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
+  while(!exit){
+    setSpeed('b','b',set_speed * 0.6, set_speed * 0.6);
+    if(digitalRead(IR_sideLeft)){
+      IR_sideLeftFlag = true;
+    }
+    if(digitalRead(IR_sideRight)){
+      IR_sideRightFlag = true;
+    }
+    if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
+      exit = true;
+    }
+  }
+  // while(getError() == -10){
+  //   setSpeed('f','f',set_speed * 0.6, set_speed * 0.6);
   // }
   // vTaskDelay(100 / portTICK_PERIOD_MS);
   // if (!digitalRead(IR_sideLeft) && !digitalRead(IR_sideRight)) {
@@ -557,22 +566,21 @@ void backUp(){
   //     setSpeed('f', 'f', set_speed * 0.65, set_speed * 0.65);
   //     vTaskDelay(10 / portTICK_PERIOD_MS);
   //   }
+  stop();
+  LED7Flag = false;
+
+  // LED7Flag = true;
+  // linefollowTimer('f',250);
+  // while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
+  //   setSpeed('b','b',set_speed * 0.65,set_speed * 0.65);
+  // }
+  // vTaskDelay(100 / portTICK_PERIOD_MS);
+  // while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
+  //   setSpeed('f','f',set_speed * 0.65,set_speed * 0.65);
+  //   vTaskDelay(100 / portTICK_PERIOD_MS);
   // }
   // stop();
   // LED7Flag = false;
-
-  LED7Flag = true;
-  linefollowTimer('f',250);
-  while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
-    setSpeed('b','b',set_speed * 0.65,set_speed * 0.65);
-  }
-  vTaskDelay(100 / portTICK_PERIOD_MS);
-  while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
-    setSpeed('f','f',set_speed * 0.65,set_speed * 0.65);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-  stop();
-  LED7Flag = false;
 }
 
 void locateServeArea(int currentPosition){
@@ -767,7 +775,7 @@ void clawUp(){
 }
 
 void IRCount(){
-  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 250){
+  if(((digitalRead(IR_sideLeft) == HIGH || digitalRead(IR_sideRight)) == HIGH) && millis() - prevTime > 350){
     IRCounter++;
     prevTime = millis();
     if(IRCounter == position_difference){
