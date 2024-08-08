@@ -301,9 +301,9 @@ void setup() {
   ledcAttachPin(clawIN2, clawCH2);
   clawServo.attach(servo1IN);
   clawServo.write(fullRetract);
-  // pinionServo.attach(servo2IN);
-  // pinionServo.writeMicroseconds(stopPW);
-  // homePlatform();
+  pinionServo.attach(servo2IN);
+  pinionServo.writeMicroseconds(stopPW);
+  homePlatform();
 
   //freeRTOS
   xTaskCreate(toggleLED, "toggleLED", 2048, NULL, 1, &LEDHandle);
@@ -317,9 +317,8 @@ void loop() {
 
   //burger
 
-  // startToPlate();
-
-  // plateToBun("bottomBun", "platform");
+  startToPlate();
+  plateToBun("bottomBun", "platform");
 
   // bunToPatty("platform");
   // pattyToCook("platform");
@@ -327,7 +326,9 @@ void loop() {
   // cookToTopBun("platform");
   // topBunToServeOnCut("platform");
 
-  backUp();
+  // backUp();
+  // turn('r');
+
 
   shutDown();
 }
@@ -514,26 +515,39 @@ void goTo(int positionChange){
 }
 
 void backUp(){
+  // LED7Flag = true;
+  // bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
+  // while(!exit){
+  //   setSpeed('b','b',set_speed * 0.65, set_speed * 0.65);
+  //   if(digitalRead(IR_sideLeft)){
+  //     IR_sideLeftFlag = true;
+  //   }
+  //   if(digitalRead(IR_sideRight)){
+  //     IR_sideRightFlag = true;
+  //   }
+  //   if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
+  //     exit = true;
+  //   }
+  // }
+  // vTaskDelay(100 / portTICK_PERIOD_MS);
+  // if (!digitalRead(IR_sideLeft) && !digitalRead(IR_sideRight)) {
+  //   while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideRight)) {
+  //     setSpeed('f', 'f', set_speed * 0.65, set_speed * 0.65);
+  //     vTaskDelay(10 / portTICK_PERIOD_MS);
+  //   }
+  // }
+  // stop();
+  // LED7Flag = false;
+
   LED7Flag = true;
-  bool IR_sideLeftFlag = false, IR_sideRightFlag = false, exit = false;
-  while(!exit){
-    setSpeed('b','b',set_speed * 0.65, set_speed * 0.65);
-    if(digitalRead(IR_sideLeft)){
-      IR_sideLeftFlag = true;
-    }
-    if(digitalRead(IR_sideRight)){
-      IR_sideRightFlag = true;
-    }
-    if(IR_sideLeftFlag == true && IR_sideRightFlag == true){
-      exit = true;
-    }
+  linefollowTimer('f',250);
+  while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
+    setSpeed('b','b',set_speed * 0.65,set_speed * 0.65);
   }
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  if (!digitalRead(IR_sideLeft) && !digitalRead(IR_sideRight)) {
-    while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideRight)) {
-      setSpeed('f', 'f', set_speed * 0.65, set_speed * 0.65);
-      vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
+  while(!digitalRead(IR_sideLeft) || !digitalRead(IR_sideLeft) ){
+    setSpeed('f','f',set_speed * 0.65,set_speed * 0.65);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   stop();
   LED7Flag = false;
@@ -594,7 +608,7 @@ void grab(String food){
     finalAngle = cheeseAngle; 
   } else if (food == "plate"){
     finalAngle = plateAngle;
-    // homeAngle = homeAngle - 23;
+    homeAngle = homeAngle - 20;
   }
   // open claw
   for(int i = currentAngle; i >= homeAngle; i--){
